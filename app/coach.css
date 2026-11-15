@@ -1,0 +1,208 @@
+.results-panel.coach-open {
+  height: 420px;
+  flex-basis: 420px;
+}
+.coach-frame {
+  height: 100%;
+}
+.coach-frame[hidden] {
+  display: none;
+}
+.coach-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+}
+.coach-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border-soft);
+  flex-wrap: wrap;
+}
+.coach-toolbar > span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font:
+    10px "JetBrains Mono",
+    monospace;
+}
+.coach-panel button,
+.coach-panel select {
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 5px 9px;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.coach-panel button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.coach-panel button:hover:enabled {
+  border-color: var(--success);
+}
+.coach-scroll {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  padding: 10px 14px;
+}
+.coach-welcome {
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 650px;
+}
+.coach-message {
+  border-bottom: 1px solid var(--border-soft);
+  padding: 12px 0;
+}
+.coach-message > b {
+  font-size: 10px;
+  color: var(--success);
+}
+.coach-message.user > b {
+  color: var(--accent);
+}
+.coach-message > div {
+  white-space: pre-wrap;
+  line-height: 1.65;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+.coach-message details {
+  margin-top: 10px;
+}
+.coach-panel summary {
+  cursor: pointer;
+  font-size: 11px;
+}
+.coach-panel pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
+  padding: 8px;
+  border-radius: 5px;
+}
+.coach-recall {
+  color: var(--muted);
+  padding: 4px 0 8px;
+}
+.coach-recall p {
+  line-height: 1.6;
+}
+.coach-recall small {
+  display: block;
+  font:
+    9px "JetBrains Mono",
+    monospace;
+  color: var(--faint);
+  overflow-wrap: anywhere;
+}
+.coach-memory {
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+.coach-memory p {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.coach-actions,
+.coach-memory form {
+  display: flex;
+  gap: 7px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.coach-memory input:not([type="checkbox"]) {
+  flex: 1;
+  min-width: 160px;
+}
+.coach-panel input:not([type="checkbox"]),
+.coach-panel textarea {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  padding: 7px;
+  font: inherit;
+}
+.coach-panel input[type="checkbox"] {
+  accent-color: var(--success);
+  vertical-align: middle;
+}
+.coach-compose {
+  border-top: 1px solid var(--border-soft);
+  padding: 8px 12px;
+}
+.coach-consent {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+  margin-bottom: 7px;
+}
+.coach-compose > div {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.coach-compose textarea {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+  max-height: 120px;
+}
+.coach-compose button[type="submit"],
+.coach-compose button:not([type]) {
+  background: var(--success);
+  color: #0e1510;
+  font-weight: 600;
+}
+.coach-error {
+  color: var(--warning);
+  line-height: 1.6;
+}
+.coach-notice {
+  color: var(--success);
+  line-height: 1.6;
+}
+.results-panel > header > div {
+  overflow: auto;
+  white-space: nowrap;
+}
+.coach-panel :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+@media (max-width: 800px) {
+  .results-panel.coach-open {
+    height: 370px;
+    flex-basis: 370px;
+  }
+  .coach-toolbar > span {
+    flex-basis: 100%;
+    order: 3;
+  }
+  .coach-scroll {
+    padding: 8px;
+  }
+  .coach-compose {
+    padding: 7px;
+  }
+}

@@ -69,6 +69,8 @@ export async function POST(request: NextRequest) {
       results: grading.results,
       passed,
       durationMs: grading.durationMs,
+      gradingMode: executionPlan(body.challengeId) ? "sandbox" : "static",
+      output: grading.output.slice(-6000),
       submittedAt: now,
     }),
     db.collection("challengeProgress").updateOne(
@@ -86,7 +88,7 @@ export async function POST(request: NextRequest) {
       { upsert: true },
     ),
   ]);
-  rememberLearningEvent(session.user.id, {
+  await rememberLearningEvent(session.user.id, {
     challengeId: body.challengeId,
     type: passed ? "submission_passed" : "submission_failed",
     summary: passed

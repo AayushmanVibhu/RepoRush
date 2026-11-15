@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { getDatabase } from "@/lib/mongodb";
 import {
   getChallenge,
   ownedSandbox,
@@ -72,10 +73,25 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           files: await pullFiles(userId, challenge.id),
         });
-      case "run":
-        return NextResponse.json(
-          await runVerifiedTests(userId, challenge, validateFiles(body.files)),
+      case "run": {
+        const grading = await runVerifiedTests(
+          userId,
+          challenge,
+          validateFiles(body.files),
         );
+        await (
+          await getDatabase()
+        )
+          .collection("testRuns")
+          .insertOne({
+            userId,
+            challengeId: challenge.id,
+            at: new Date(),
+            results: grading.results,
+            output: grading.output.slice(-6000),
+          });
+        return NextResponse.json(grading);
+      }
       case "input": {
         if (typeof body.data !== "string" || body.data.length > 8192)
           throw new SandboxProblem("Terminal input exceeds limits.");

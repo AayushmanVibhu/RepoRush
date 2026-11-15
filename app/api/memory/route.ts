@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { rememberLearningEvent, type LearningEvent } from "@/lib/supermemory";
+import { createHash } from "node:crypto";
 
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (
+    request.headers.get("origin") &&
+    request.headers.get("origin") !== request.nextUrl.origin
+  )
+    return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
   const event = (await request.json()) as LearningEvent;
   if (
     typeof event.challengeId !== "string" ||
@@ -19,6 +25,14 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
-  const result = await rememberLearningEvent(session.user.id, event);
+  const eventId = createHash("sha256")
+    .update(
+      `${session.user.id}:${event.challengeId}:${event.type}:${new Date().toISOString().slice(0, 10)}`,
+    )
+    .digest("hex");
+  const result = await rememberLearningEvent(session.user.id, {
+    ...event,
+    eventId,
+  });
   return NextResponse.json(result);
 }

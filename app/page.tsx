@@ -41,6 +41,7 @@ import {
 import { LoginPanel } from "./login/login-panel";
 import { BrandLogo } from "./brand-logo";
 import { LinuxTerminal, linuxRequest } from "./linux-terminal";
+import { AICoach } from "./ai-coach";
 import { executionPlan, validateFiles } from "@/lib/sandbox-policy";
 
 const Monaco = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -474,18 +475,20 @@ function ResultsPanel({
   setTab,
   close,
   terminal,
+  coach,
   output,
 }: {
   running: boolean;
   results: TestRow[];
-  tab: "tests" | "output" | "terminal";
-  setTab: (t: "tests" | "output" | "terminal") => void;
+  tab: "tests" | "output" | "terminal" | "coach";
+  setTab: (t: "tests" | "output" | "terminal" | "coach") => void;
   close: () => void;
   terminal: React.ReactNode;
+  coach: React.ReactNode;
   output: string;
 }) {
   return (
-    <section className={`results-panel ${tab === "terminal" ? "terminal-open" : ""}`}>
+    <section className={`results-panel ${tab === "terminal" ? "terminal-open" : tab === "coach" ? "coach-open" : ""}`}>
       <header>
         <div>
           <button
@@ -510,6 +513,7 @@ function ResultsPanel({
           <button className={tab === "terminal" ? "active" : ""} onClick={() => setTab("terminal")}>
             <TerminalSquare /> Linux terminal
           </button>
+          <button className={tab === "coach" ? "active" : ""} onClick={() => setTab("coach")}><Sparkles /> AI coach</button>
         </div>
         <button title="Close panel" onClick={close}>
           <X />
@@ -517,7 +521,8 @@ function ResultsPanel({
       </header>
       <div className="results-body">
         <div className="linux-frame" hidden={tab !== "terminal"}>{terminal}</div>
-        {tab === "terminal" ? null : running ? (
+        <div className="coach-frame" hidden={tab !== "coach"}>{coach}</div>
+        {tab === "terminal" || tab === "coach" ? null : running ? (
           <div className="running-state">
             <span className="spinner" />
             Running checks…
@@ -665,7 +670,8 @@ function Workspace({
   const [results, setResults] = useState<TestRow[]>([]);
   const [running, setRunning] = useState(false);
   const [bottomOpen, setBottomOpen] = useState(true);
-  const [tab, setTab] = useState<"tests" | "output" | "terminal">("tests");
+  const [tab, setTab] = useState<"tests" | "output" | "terminal" | "coach">("tests");
+  const [selection, setSelection] = useState("");
   const [output, setOutput] = useState("");
   const [saveState, setSaveState] = useState<
     "loading" | "saving" | "saved" | "local"
@@ -765,7 +771,7 @@ function Workspace({
   }, [challenge.id, files, storageKey]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.target instanceof Element && e.target.closest(".linux-panel")) return;
+      if (e.target instanceof Element && e.target.closest(".linux-panel, .coach-panel")) return;
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
         e.preventDefault();
         execute();
@@ -879,6 +885,7 @@ function Workspace({
               height="100%"
               language={languageForPath(selected)}
               value={files[selected] ?? ""}
+              onMount={editor => {setSelection(""); editor.onDidChangeCursorSelection(() => {const range = editor.getSelection(); setSelection(range ? (editor.getModel()?.getValueInRange(range) || "").slice(0, 6000) : "");});}}
               onChange={(v) => setFiles((f) => ({ ...f, [selected]: v ?? "" }))}
               theme="vs-dark"
               options={{
@@ -902,6 +909,7 @@ function Workspace({
               close={() => setBottomOpen(false)}
               output={output}
               terminal={<LinuxTerminal challengeId={challenge.id} files={files} onFilesChange={setFiles} visible={tab === "terminal"} />}
+              coach={<AICoach challenge={challenge} files={files} selected={selected} selection={selection} output={output} onFilesChange={setFiles} />}
             />
           )}{" "}
           {!bottomOpen && (

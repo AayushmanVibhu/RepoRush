@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
 import type { Challenge } from "./challenges";
 type FileBuffers = Record<string, string>;
 import type { CoachMessage } from "@/lib/coach";
@@ -351,7 +352,17 @@ export function AICoach({
             key={`${message.at}:${index}`}
           >
             <b>{message.role === "user" ? "You" : "RepoRush coach"}</b>
-            <div>{message.text}</div>
+            <div
+              className={message.role === "assistant" ? "coach-markdown" : ""}
+            >
+              {message.role === "assistant" ? (
+                <Markdown skipHtml disallowedElements={["img"]}>
+                  {message.text}
+                </Markdown>
+              ) : (
+                message.text
+              )}
+            </div>
             {message.patch && (
               <details>
                 <summary>Review proposed edit · {message.patch.path}</summary>
@@ -372,7 +383,11 @@ export function AICoach({
         {(busy || pending) && (
           <article className="coach-message" aria-live="polite">
             <b>RepoRush coach{busy ? " · thinking" : " · incomplete"}</b>
-            <div>{pending || "Reading the shared context…"}</div>
+            <div className="coach-markdown">
+              <Markdown skipHtml disallowedElements={["img"]}>
+                {pending || "Reading the shared context…"}
+              </Markdown>
+            </div>
           </article>
         )}
         {notice && (

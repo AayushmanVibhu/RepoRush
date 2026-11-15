@@ -730,7 +730,9 @@ function Workspace({
     fetch(`/api/progress/${encodeURIComponent(challenge.id)}`)
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then((data) => {
-        if (!active || !data.progress?.files) return;
+        if (!active) return;
+        setSaveState(data.progress?.files ? "saved" : "local");
+        if (!data.progress?.files) return;
         const saved = data.progress.files as FileBuffers;
         setFiles(validateFiles(saved));
       })

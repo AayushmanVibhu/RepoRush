@@ -183,8 +183,41 @@
   line-height: 1.6;
 }
 .results-panel > header > div {
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   white-space: nowrap;
+}
+.coach-message .coach-markdown {
+  white-space: normal;
+}
+.coach-markdown p {
+  margin: 8px 0;
+}
+.coach-markdown code {
+  font:
+    11px/1.6 "JetBrains Mono",
+    monospace;
+  color: var(--text);
+  background: var(--panel);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.coach-markdown pre code {
+  padding: 0;
+  background: transparent;
+}
+.coach-markdown ul,
+.coach-markdown ol {
+  padding-left: 20px;
+}
+.coach-markdown a {
+  color: var(--accent);
+}
+.coach-markdown h1,
+.coach-markdown h2,
+.coach-markdown h3 {
+  font-size: 13px;
+  margin: 12px 0 8px;
 }
 .coach-panel :focus-visible {
   outline: 2px solid var(--accent);

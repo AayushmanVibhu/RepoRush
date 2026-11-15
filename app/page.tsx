@@ -22,6 +22,7 @@ import {
   Play,
   RotateCcw,
   Search,
+  ArrowUpDown,
   SlidersHorizontal,
   Sparkles,
   Target,
@@ -189,23 +190,38 @@ function Explorer({
   const [difficulty, setDifficulty] = useState("All");
   const [language, setLanguage] = useState("All");
   const [skill, setSkill] = useState("All");
+  const [sort, setSort] = useState("recommended");
   const skillOptions = useMemo(
     () => [...new Set(challenges.flatMap((c) => c.skills))].sort(),
     [],
   );
-  const rows = useMemo(
-    () =>
-      challenges.filter(
-        (c) =>
-          (difficulty === "All" || c.difficulty === difficulty) &&
-          (language === "All" || c.language === language) &&
-          (skill === "All" || c.skills.includes(skill)) &&
-          (c.title + " " + c.skills.join(" "))
-            .toLowerCase()
-            .includes(query.toLowerCase()),
-      ),
-    [query, difficulty, language, skill],
-  );
+  const rows = useMemo(() => {
+    const difficultyRank: Record<Difficulty, number> = {
+      Easy: 0,
+      Medium: 1,
+      Hard: 2,
+    };
+    const filtered = challenges.filter(
+      (c) =>
+        (difficulty === "All" || c.difficulty === difficulty) &&
+        (language === "All" || c.language === language) &&
+        (skill === "All" || c.skills.includes(skill)) &&
+        (c.title + " " + c.skills.join(" "))
+          .toLowerCase()
+          .includes(query.toLowerCase()),
+    );
+    return filtered.toSorted((a, b) => {
+      if (sort === "difficulty-asc")
+        return difficultyRank[a.difficulty] - difficultyRank[b.difficulty];
+      if (sort === "difficulty-desc")
+        return difficultyRank[b.difficulty] - difficultyRank[a.difficulty];
+      if (sort === "language")
+        return (
+          a.language.localeCompare(b.language) || a.title.localeCompare(b.title)
+        );
+      return 0;
+    });
+  }, [query, difficulty, language, skill, sort]);
   return (
     <div className="app-shell">
       <AppSidebar
@@ -279,6 +295,16 @@ function Explorer({
                   {option}
                 </option>
               ))}
+            </select>
+            <ChevronDown />
+          </label>
+          <label>
+            <ArrowUpDown />
+            <select value={sort} onChange={(e) => setSort(e.target.value)}>
+              <option value="recommended">Recommended order</option>
+              <option value="difficulty-asc">Difficulty: Easy to Hard</option>
+              <option value="difficulty-desc">Difficulty: Hard to Easy</option>
+              <option value="language">Language: A to Z</option>
             </select>
             <ChevronDown />
           </label>

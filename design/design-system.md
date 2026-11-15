@@ -8,8 +8,10 @@ RepoRush is a calm, compact developer tool. Structure, legibility, and system fe
 - Panel: `--panel` (`#15181D`)
 - Elevated: `--elevated` (`#1D2229`)
 - Border: `--border` (`#2B313A`)
-- Text: `--text` (`#F2F4F7`); secondary `--muted` (`#929AA6`)
-- Accent: `--accent` (`#7399FF`); success `--success` (`#42B883`); error `--error` (`#E57373`)
+- Text: warm parchment `--text` (`#D7C5A4`); secondary sage-gray `--muted` (`#9DA49D`)
+- Accent: `--accent` (`#7399FF`); success `--success` (`#5FAD83`); error `--error` (`#E57373`)
+
+The warm parchment ink is the product-wide primary text color across authentication, catalog, tracks, progress, workspace chrome, and results. Monaco retains its native editor theme so syntax contrast is not affected. Green is reserved for successful states and the GitHub authentication action.
 
 Use Geist for interface text and JetBrains Mono for code and technical metadata. The spacing scale is 4, 8, 12, 16, 24, 32, and 48px. Controls use 6px radii, small containers 8px, and workspace panels square edges. Icons come only from Lucide at 13–18px.
 

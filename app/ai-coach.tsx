@@ -90,8 +90,10 @@ export function AICoach({
             ? "Saved locally; memory delivery will retry on your next visit."
             : "Saved. New memories may take a moment to become searchable.",
         );
+      return true;
     } catch (e) {
       setNotice((e as Error).message);
+      return false;
     } finally {
       setMemoryBusy(false);
     }
@@ -143,7 +145,7 @@ export function AICoach({
           files: shared,
           output,
         }),
-        signal: controller.signal,
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(95000)]),
       });
       if (!response.ok) {
         const data = await response.json();
@@ -177,7 +179,9 @@ export function AICoach({
       }
     } catch (e) {
       setError(
-        (e as Error).name === "AbortError"
+        (e as Error).name === "TimeoutError"
+          ? "The coach took too long to respond. Please retry."
+          : (e as Error).name === "AbortError"
           ? "Response stopped. Partial text was not saved."
           : (e as Error).message,
       );
@@ -299,9 +303,9 @@ export function AICoach({
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                void memoryAction({ action: "remember", text: note }).then(() =>
-                  setNote(""),
-                );
+                void memoryAction({ action: "remember", text: note }).then(saved => {
+                  if (saved) setNote("");
+                });
               }}
             >
               <input

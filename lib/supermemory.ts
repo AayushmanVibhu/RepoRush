@@ -36,17 +36,19 @@ export function memoryClient() {
   });
 }
 export async function memorySettings(userId: string): Promise<Settings> {
-  return (
-    (await (
-      await getDatabase()
-    )
-      .collection<Settings>("memorySettings")
-      .findOne({ _id: userId })) || {
-      _id: userId,
-      enabled: false,
-      generation: 0,
-    }
+  const collection = (await getDatabase()).collection<Settings>(
+    "memorySettings",
   );
+  const existing = await collection.findOne({ _id: userId });
+  if (existing) return existing;
+  // Initialize existing and new accounts on first use; preserve explicit opt-outs.
+  const defaults: Settings = { _id: userId, enabled: true, generation: 0 };
+  await collection.updateOne(
+    { _id: userId },
+    { $setOnInsert: defaults },
+    { upsert: true },
+  );
+  return (await collection.findOne({ _id: userId })) || defaults;
 }
 export async function setMemoryEnabled(userId: string, enabled: boolean) {
   await (
@@ -264,20 +266,18 @@ export async function forgetLearning(userId: string) {
     `reporush_user_${userId}`,
   ]) {
     if (namespace.length > 100 || !/^[\w:-]+$/.test(namespace)) continue;
-    await db
-      .collection<MemoryJob>("memoryOutbox")
-      .insertOne({
-        _id: randomUUID(),
-        userId,
-        generation: settings.generation,
-        namespace,
-        operation: "delete",
-        content: "",
-        status: "pending",
-        attempts: 0,
-        retryAt: new Date(),
-        createdAt: new Date(),
-      });
+    await db.collection<MemoryJob>("memoryOutbox").insertOne({
+      _id: randomUUID(),
+      userId,
+      generation: settings.generation,
+      namespace,
+      operation: "delete",
+      content: "",
+      status: "pending",
+      attempts: 0,
+      retryAt: new Date(),
+      createdAt: new Date(),
+    });
   }
   const delivery = await flushMemories(userId, 3);
   return { forgotten: true, enabled: false, deletion: delivery.status };

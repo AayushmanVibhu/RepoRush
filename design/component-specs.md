@@ -23,3 +23,5 @@ Brand identity uses the icon-only parchment-and-green R in `public/logo.svg`, re
 # AI coach panel
 
 The workspace results area includes an AI coach tab using the existing dark panel, parchment text, green action and monospace file-label tokens. Mode selection, scrollable conversation and a pinned consent/question form share the panel. Learning memory controls expand inline; recall shows actual records and provider state. Suggested edits use collapsible before/after code and an explicit Apply action with stale-version validation. Loading, stop, quota, unavailable-memory and signed-out states remain visible. Narrow screens wrap toolbar actions and keep the editor and conversation independently scrollable.
+
+`ResizableResults` provides a shared, focusable horizontal divider above all bottom-panel tabs. Pointer capture supports mouse, pen and touch dragging. Heights are bounded against the available editor space and remembered locally across challenges; double-click restores each tab's default height. Linux terminal fitting and Monaco layout react to container resizing.

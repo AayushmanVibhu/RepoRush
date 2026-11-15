@@ -223,6 +223,37 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+.resizable-results {
+  position: relative;
+  min-height: 0;
+}
+.results-resize-handle {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  z-index: 10;
+  cursor: ns-resize;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.results-resize-handle span {
+  width: 32px;
+  height: 2px;
+  border-radius: 4px;
+  background: var(--border);
+}
+.results-resize-handle:hover span,
+.results-resize-handle:focus-visible span {
+  background: var(--accent);
+}
+.results-resize-handle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 @media (max-width: 800px) {
   .results-panel.coach-open {
     height: 370px;

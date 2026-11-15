@@ -42,6 +42,7 @@ import { LoginPanel } from "./login/login-panel";
 import { BrandLogo } from "./brand-logo";
 import { LinuxTerminal, linuxRequest } from "./linux-terminal";
 import { AICoach } from "./ai-coach";
+import { ResizableResults } from "./resizable-results";
 import { executionPlan, validateFiles } from "@/lib/sandbox-policy";
 
 const Monaco = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -488,7 +489,7 @@ function ResultsPanel({
   output: string;
 }) {
   return (
-    <section className={`results-panel ${tab === "terminal" ? "terminal-open" : tab === "coach" ? "coach-open" : ""}`}>
+    <ResizableResults tab={tab}>
       <header>
         <div>
           <button
@@ -558,7 +559,7 @@ function ResultsPanel({
           </pre>
         )}
       </div>
-    </section>
+    </ResizableResults>
   );
 }
 function IssuePanel({

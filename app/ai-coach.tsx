@@ -36,7 +36,7 @@ export function AICoach({
   const [mode, setMode] = useState<CoachMode>("hint");
   const [question, setQuestion] = useState("");
   const [consent, setConsent] = useState(false);
-  const [enabled, setEnabled] = useState(false);
+  const [enabled, setEnabled] = useState<boolean | null>(null);
   const [configured, setConfigured] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState("");
@@ -59,6 +59,7 @@ export function AICoach({
           setMessages(data.messages);
           setConfigured(data.configured);
           setEnabled(data.memoryEnabled);
+          setStatus(data.memoryEnabled ? 'ready' : 'off');
         }
       })
       .catch((e) => {
@@ -77,7 +78,7 @@ export function AICoach({
     setNotice("");
     try {
       const data = await api("/api/coach/memory", json(body));
-      if (typeof data.enabled === "boolean") setEnabled(data.enabled);
+      if (typeof data.enabled === "boolean") {setEnabled(data.enabled); setStatus(data.enabled ? 'ready' : 'off');}
       if (data.forgotten) {
         setMemories([]);
         setStatus("off");
@@ -238,7 +239,7 @@ export function AICoach({
           {selection ? " · highlighted code included" : ""}
         </span>
         <button onClick={() => setSettings(!settings)}>
-          Learning memory {enabled ? "on" : "off"}
+          Learning memory {enabled === null ? "loading…" : enabled ? "on" : "off"}
         </button>
         <button
           disabled={busy}
@@ -261,8 +262,8 @@ export function AICoach({
             <label>
               <input
                 type="checkbox"
-                checked={enabled}
-                disabled={memoryBusy || busy}
+                checked={enabled === true}
+                disabled={enabled === null || memoryBusy || busy}
                 onChange={(e) => {
                   if (!e.target.checked) {
                     setMemories([]);
@@ -278,8 +279,9 @@ export function AICoach({
               Supermemory
             </label>
             <p>
-              Opt-in memory stores practice observations and notes, never entire
-              source files. Chats are saved separately in your account.
+              Learning memory is on by default for your profile. It remembers
+              practice, coaching context and lessons across challenges. You can
+              pause it or forget it here. Chats are saved separately.
             </p>
             <div className="coach-actions">
               <button disabled={memoryBusy} onClick={inspectMemory}>

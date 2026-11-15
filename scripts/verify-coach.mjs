@@ -169,3 +169,28 @@ assert.equal((await empty.recallLearning("alice", "help")).memories.length, 0);
 console.log(
   "PASS: namespace isolation, redaction, context limits, exact patch validation, mode tools and honest retrieval failures",
 );
+
+let profile = null;
+let profileWrites = 0;
+const settingsCollection = {
+  findOne: async () => profile,
+  updateOne: async (_filter, update) => {profileWrites++; profile ||= update.$setOnInsert;},
+};
+const defaultMemory = load('lib/supermemory.ts', {...dependencies, './mongodb': {getDatabase: async () => ({collection: () => settingsCollection})}}, {SUPERMEMORY_API_KEY: 'test'});
+assert.equal((await defaultMemory.memorySettings('new-user')).enabled, true);
+assert.equal(profile._id, 'new-user');
+assert.equal(profileWrites, 1);
+profile.enabled = false;
+assert.equal((await defaultMemory.memorySettings('new-user')).enabled, false);
+assert.equal(profileWrites, 1, 'Reading a profile must preserve explicit opt-outs');
+
+let rememberedExchange;
+const conversationDB = {collection: () => ({findOne: async () => null, updateOne: async () => ({matchedCount: 1})})};
+const exchangeCoach = load('lib/coach.ts', {'@google/genai': {GoogleGenAI: AI, ThinkingLevel: {LOW: 'LOW'}, Type: {}}, 'node:crypto': crypto, './mongodb': {getDatabase: async () => conversationDB}, './coach-policy': policy, './supermemory': {queueMemory: async (userId, content) => {rememberedExchange = {userId, content};}}});
+const savedChat = await exchangeCoach.completeCoach('alice', 'challenge-a', 'Explain recursion', 'Start small.\n```python\nprint("source-code")\n```', [], undefined);
+assert.equal(savedChat.length, 2);
+assert.equal(rememberedExchange.userId, 'alice');
+assert.match(rememberedExchange.content, /Explain recursion/);
+assert.match(rememberedExchange.content, /not verified mastery/);
+assert.ok(!rememberedExchange.content.includes('source-code'));
+console.log('PASS: default-on profiles persist, explicit opt-outs survive, and coaching context omits fenced source code');

@@ -1,1 +1,32 @@
-{"name":"reporush","version":"1.0.0","private":true,"scripts":{"dev":"next dev","build":"next build","start":"next start","typecheck":"tsc --noEmit"},"dependencies":{"@monaco-editor/react":"^4.7.0","lucide-react":"^0.468.0","next":"^15.1.3","react":"^19.0.0","react-dom":"^19.0.0"},"devDependencies":{"@types/node":"^22.10.2","@types/react":"^19.0.3","@types/react-dom":"^19.0.2","typescript":"^5.7.2"}}
+{
+  "name": "reporush",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build --webpack",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@auth/mongodb-adapter": "^3.11.3",
+    "@monaco-editor/react": "^4.7.0",
+    "lucide-react": "^0.468.0",
+    "mongodb": "^6.22.0",
+    "next": "^16.4.6",
+    "next-auth": "^5.0.0-beta.32",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "supermemory": "^5.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.3",
+    "@types/react-dom": "^19.0.2",
+    "prettier": "^3.10.1",
+    "typescript": "^5.7.2"
+  },
+  "overrides": {
+    "dompurify": "3.4.18"
+  }
+}

@@ -12,9 +12,6 @@ import {
   Clock3,
   Code2,
   FileCode2,
-  FileJson2,
-  Files,
-  FolderOpen,
   GitBranch,
   LayoutDashboard,
   LogOut,
@@ -43,6 +40,7 @@ import { BrandLogo } from "./brand-logo";
 import { LinuxTerminal, linuxRequest } from "./linux-terminal";
 import { AICoach } from "./ai-coach";
 import { ResizableResults } from "./resizable-results";
+import { FileTree } from "./file-tree";
 import { executionPlan, validateFiles } from "@/lib/sandbox-policy";
 
 const Monaco = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -396,69 +394,6 @@ function Explorer({
   );
 }
 
-function FileTree({
-  challenge,
-  files,
-  selected,
-  setSelected,
-  dirty,
-}: {
-  challenge: Challenge;
-  files: FileBuffers;
-  selected: string;
-  setSelected: (s: string) => void;
-  dirty: Set<string>;
-}) {
-  const groups = useMemo(() => {
-    const map = new Map<string, string[]>();
-    Object.keys(files).forEach((path) => {
-      const parts = path.split("/");
-      const folder = parts.length > 1 ? parts.slice(0, -1).join("/") : "";
-      map.set(folder, [...(map.get(folder) || []), path]);
-    });
-    return [...map.entries()];
-  }, [files]);
-  return (
-    <div className="file-panel">
-      <div className="panel-title">
-        <span>
-          <Files />
-          Explorer
-        </span>
-      </div>
-      <div className="repo-title">
-        <ChevronDown />
-        <b>{challenge.repoName.toUpperCase()}</b>
-      </div>
-      {groups.map(([folder, paths]) => (
-        <div key={folder || "root"}>
-          {folder && (
-            <div className="tree-row folder">
-              <ChevronDown />
-              <FolderOpen />
-              {folder}
-            </div>
-          )}
-          {paths.map((path) => {
-            const name = path.split("/").at(-1);
-            return (
-              <button
-                key={path}
-                title={path}
-                onClick={() => setSelected(path)}
-                className={`tree-row file ${folder ? "" : "root-file"} ${selected === path ? "selected" : ""}`}
-              >
-                {path.endsWith(".json") ? <FileJson2 /> : <FileCode2 />}
-                {name}
-                {dirty.has(path) && <i />}
-              </button>
-            );
-          })}
-        </div>
-      ))}
-    </div>
-  );
-}
 function loadFiles(c: Challenge): FileBuffers {
   if (typeof window === "undefined") return { ...c.files };
   try {

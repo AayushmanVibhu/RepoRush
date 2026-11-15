@@ -10,6 +10,8 @@ Progress offers Delete progress with a dialog requiring the exact phrase DELETE 
 
 Horizontal workspace handles resize the explorer and ticket panels within safe bounds. On narrow layouts, both secondary panels collapse to prioritize the editor. Errors must explain the failed behavior without exposing hidden tests or a reference solution.
 
+The file explorer scrolls independently of the editor. Clicking a folder row or its arrow toggles its children; the repository row toggles the entire file list. Native buttons support Enter and Space. Collapse preserves the selected file and unsaved edits; navigation to another file reveals that file's ancestor folders.
+
 Drag the divider above the bottom-panel tabs up to enlarge the panel or down to give space back to the editor. The divider also supports Up/Down arrows and Home/End when focused. Its height persists on this device across tabs and reopening; double-click resets the default. Resizing retains editor and terminal minimum space and responds to window size changes.
 
 The Linux tab starts an authenticated isolated workspace only on request. Editor changes sync with conflict checks; terminal changes load without overwriting independent editor edits. Same-file conflicts pause syncing until explicitly resolved. Ctrl shortcuts in the terminal are owned by the shell. Run/Submit execute server-owned regressions in fresh sandboxes for configured challenges; other challenges identify their checks as static. See `docs/linux-workspaces.md` for lifecycle and limits.

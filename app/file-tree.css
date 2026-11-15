@@ -1,0 +1,68 @@
+.file-panel {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.file-panel > .panel-title {
+  flex-shrink: 0;
+}
+.file-tree-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--panel);
+}
+.file-tree-scroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.file-tree-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  min-width: max-content;
+}
+.file-tree-list[hidden] {
+  display: none;
+}
+.file-tree-scroll .repo-title {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  width: 100%;
+  min-width: max-content;
+  background: var(--panel);
+  color: var(--text);
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+}
+.file-tree-scroll .tree-row {
+  width: 100%;
+  min-width: max-content;
+  white-space: nowrap;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.file-tree-scroll .tree-row.folder {
+  color: var(--muted);
+}
+.file-tree-scroll .tree-row.folder:hover,
+.file-tree-scroll .repo-title:hover {
+  background: var(--elevated);
+  color: var(--text);
+}
+.file-tree-scroll svg {
+  flex-shrink: 0;
+}
+.file-tree-scroll .tree-row.file.selected,
+.file-tree-scroll .tree-row.file:hover {
+  background: var(--elevated);
+  color: var(--text);
+}

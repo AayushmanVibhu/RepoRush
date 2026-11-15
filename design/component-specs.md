@@ -9,7 +9,7 @@
 - `ProgressiveHints`: three ordered hints revealed one at a time. Hints guide investigation without inserting code or exposing hidden checks.
 - `DifficultyBadge`: dot plus readable label; never color alone.
 - `WorkspaceToolbar`: fixed 50px row containing context and the run/submit workflow.
-- `FileExplorer`: path-driven folders, extension icons, selected-file edge, and per-file unsaved dots. It renders the active challenge's repository rather than a global file list.
+- `FileExplorer`: nested path-driven folders, extension icons, selected-file edge, and per-file unsaved dots. Its file list scrolls independently below the Explorer heading, including horizontal scrolling for long paths. Folder and repository disclosure buttons show their expanded state and hide or reveal descendants without changing editor buffers. It renders the active challenge's repository rather than a global file list.
 - `EditorTabs`: active file and dirty state. Each repository file has an independent editable Monaco model identified by its file path.
 - `IssuePanel`: issue metadata followed by description, expected behavior, reproduction, and constraints.
 - `TestResultsPanel`: idle, running, pass, and fail states; diagnostics use actual local evaluation results.

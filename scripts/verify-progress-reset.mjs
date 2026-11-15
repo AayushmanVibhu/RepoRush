@@ -55,7 +55,7 @@ vm.runInNewContext(
   },
 );
 const request = (
-  body = { confirmation: "delete-my-progress" },
+  body = { confirmation: "DELETE MY PROGRESS" },
   origin = "https://reporush.test",
 ) => ({
   headers: { get: () => origin },
@@ -70,6 +70,7 @@ assert.equal(
   403,
 );
 assert.equal((await exports.DELETE(request({}))).status, 400);
+assert.equal((await exports.DELETE(request({confirmation: 'delete-my-progress'}))).status, 400);
 assert.equal(queries.length, 0, "No database deletion before confirmation");
 const result = await exports.DELETE(request());
 assert.equal(result.status, 200);

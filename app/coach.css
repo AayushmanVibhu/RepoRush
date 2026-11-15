@@ -222,6 +222,15 @@
 .progress-actions button:disabled {opacity:.5; cursor:default;}
 .progress-delete-notice {max-width:1180px; margin:16px auto 0; color:var(--success); font-size:12px;}
 .progress-delete-notice.failed {color:var(--error);}
+.delete-progress-dialog {max-width:480px; width:calc(100% - 32px); background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:24px;}
+.delete-progress-dialog::backdrop {background:rgb(0 0 0 / .65);}
+.delete-progress-dialog h2 {font-size:18px; margin:0 0 12px;}
+.delete-progress-dialog p {color:var(--muted); font-size:12px; line-height:1.6;}
+.delete-progress-dialog label {display:block; margin:16px 0 8px; font-size:12px;}
+.delete-progress-dialog input {width:100%; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:var(--text); padding:8px 12px;}
+.delete-dialog-actions {display:flex; justify-content:flex-end; gap:8px; margin-top:24px;}
+.delete-progress-dialog .delete-progress-button {background:var(--error); color:var(--bg); border-color:var(--error);}
+.delete-progress-dialog button:disabled {opacity:.45; cursor:default;}
 .resizable-results {
   position: relative;
   min-height: 0;

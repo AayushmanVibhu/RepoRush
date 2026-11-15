@@ -6,7 +6,7 @@ Hints unlock in three steps: directional, diagnostic, then near-solution. The in
 
 In the AI coach prompt, Enter submits through the same form as Ask coach; Shift+Enter inserts a new line. Submission requires a nonempty prompt and an idle coach. Enter used to compose text with an input method does not submit.
 
-Progress offers Delete progress with an explicit confirmation before removing the signed-in account's challenge records, submissions, regression history and local drafts. It stops an active Linux workspace, updates shared completion metrics, and leaves account identity and AI learning memory intact. Cancellation performs no deletion; errors remain visible and allow retry.
+Progress offers Delete progress with a dialog requiring the exact phrase DELETE MY PROGRESS before removing the signed-in account's challenge records, submissions, regression history and local drafts. It stops an active Linux workspace, updates shared completion metrics, and leaves account identity and AI learning memory intact. Cancellation performs no deletion; errors remain visible and allow retry.
 
 Horizontal workspace handles resize the explorer and ticket panels within safe bounds. On narrow layouts, both secondary panels collapse to prioritize the editor. Errors must explain the failed behavior without exposing hidden tests or a reference solution.
 

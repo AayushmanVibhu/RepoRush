@@ -1066,10 +1066,12 @@ function ProgressView({
   const [deleting, setDeleting] = useState(false);
   const [deleteNotice, setDeleteNotice] = useState('');
   const [deleteFailed, setDeleteFailed] = useState(false);
+  const deleteDialog = useRef<HTMLDialogElement>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const deleteProgress = async () => {
-    if (deleting || !window.confirm('Delete all your challenge progress, saved code, hint counts and submission history? This cannot be undone. Your account and AI learning memory will remain.')) return;
+    if (deleting || deleteConfirmation !== 'DELETE MY PROGRESS') return;
     setDeleting(true); setDeleteNotice(''); setDeleteFailed(false);
-    try {await onDeleteProgress(); setDeleteNotice('Your challenge progress has been deleted.');}
+    try {await onDeleteProgress(); setDeleteNotice('Your challenge progress has been deleted.'); deleteDialog.current?.close(); setDeleteConfirmation('');}
     catch (error) {setDeleteFailed(true); setDeleteNotice((error as Error).message);}
     finally {setDeleting(false);}
   };
@@ -1107,7 +1109,7 @@ function ProgressView({
             <p>A clear view of the work you have shipped.</p>
           </div>
           <div className="progress-actions">
-          <button className="continue-button delete-progress-button" onClick={() => void deleteProgress()} disabled={deleting}>
+          <button className="continue-button delete-progress-button" onClick={() => {setDeleteConfirmation(''); setDeleteNotice(''); deleteDialog.current?.showModal();}} disabled={deleting}>
             <XCircle />{deleting ? 'Deleting…' : 'Delete progress'}
           </button>
           <button className="continue-button" onClick={() => open(next)} disabled={deleting}>
@@ -1116,6 +1118,19 @@ function ProgressView({
           </button>
           </div>
         </header>
+        <dialog ref={deleteDialog} className="delete-progress-dialog" aria-labelledby="delete-progress-title" onCancel={event => {if (deleting) event.preventDefault(); else setDeleteConfirmation('');}}>
+          <h2 id="delete-progress-title">Delete your progress?</h2>
+          <p>This deletes all your challenge progress, saved code, hint counts and submission history. This cannot be undone. Your account and AI learning memory remain.</p>
+          {deleteFailed && deleteNotice && <p className="progress-delete-notice failed" role="alert">{deleteNotice}</p>}
+          <form onSubmit={event => {event.preventDefault(); void deleteProgress();}}>
+            <label htmlFor="delete-progress-confirmation">Type DELETE MY PROGRESS to confirm</label>
+            <input id="delete-progress-confirmation" autoComplete="off" value={deleteConfirmation} onChange={event => setDeleteConfirmation(event.target.value)} disabled={deleting}/>
+            <div className="delete-dialog-actions">
+              <button type="button" className="continue-button" disabled={deleting} onClick={() => {deleteDialog.current?.close(); setDeleteConfirmation('');}}>Cancel</button>
+              <button type="submit" className="continue-button delete-progress-button" disabled={deleting || deleteConfirmation !== 'DELETE MY PROGRESS'}>{deleting ? 'Deleting…' : 'Delete all progress'}</button>
+            </div>
+          </form>
+        </dialog>
         {deleteNotice && <p className={`progress-delete-notice ${deleteFailed ? 'failed' : ''}`} role={deleteFailed ? 'alert' : 'status'}>{deleteNotice}</p>}
         <section className="metric-grid">
           <article>
@@ -1340,7 +1355,7 @@ export default function Page() {
   };
   const deleteProgress = async () => {
     progressVersion.current++;
-    const response = await fetch('/api/progress', {method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({confirmation: 'delete-my-progress'})});
+    const response = await fetch('/api/progress', {method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({confirmation: 'DELETE MY PROGRESS'})});
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Could not delete your progress. Please retry.');
     setProgress({});

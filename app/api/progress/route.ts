@@ -11,7 +11,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
   try {
     const body = await request.json();
-    if (body.confirmation !== "delete-my-progress")
+    if (body.confirmation !== "DELETE MY PROGRESS")
       return NextResponse.json(
         { error: "Confirm progress deletion first." },
         { status: 400 },

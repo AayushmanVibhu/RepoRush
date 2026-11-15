@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify:interviews": "node scripts/verify-interview-challenges.mjs",
+    "build:interviews": "node scripts/build-interview-challenges.mjs"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.11.3",

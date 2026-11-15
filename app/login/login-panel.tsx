@@ -1,6 +1,7 @@
 "use client";
 import { ArrowRight, Check, GitBranch, Github, Sparkles } from "lucide-react";
 import { signIn } from "next-auth/react";
+import { challenges } from "../challenges";
 
 export function LoginPanel() {
   return (
@@ -22,7 +23,7 @@ export function LoginPanel() {
           <ul>
             <li>
               <Check />
-              29 curated repository challenges
+              {challenges.length} curated repository challenges
             </li>
             <li>
               <Check />

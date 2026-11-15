@@ -77,7 +77,8 @@ const coreChallenges: Challenge[] = [
 
 import { additionalChallenges } from "./challenge-packs";
 import { ossChallenges } from "./oss-challenges";
-export const challenges: Challenge[] = [...coreChallenges,...additionalChallenges,...ossChallenges];
+import { interviewChallenges } from "./interview-challenges";
+export const challenges: Challenge[] = [...coreChallenges,...additionalChallenges,...ossChallenges,...interviewChallenges];
 
 const catalogErrors:string[]=[];
 const ids=new Set<string>();

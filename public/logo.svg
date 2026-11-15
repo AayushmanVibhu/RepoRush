@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 400" fill="none">
+  <title>RepoRush</title>
+  <defs>
+    <mask id="branches" maskUnits="userSpaceOnUse" x="0" y="0" width="448" height="400">
+      <path fill="white" d="M0 0h448v400H0z"/>
+      <path d="M143 177h25c25 0 35-12 54-29l54-48M153 178c27 0 34 12 30 42l-8 58" stroke="black" stroke-width="29" stroke-linecap="round"/>
+      <circle cx="117" cy="177" r="43" fill="black"/>
+      <circle cx="117" cy="177" r="24" fill="white"/>
+      <circle cx="296" cy="100" r="44" fill="black"/>
+      <circle cx="296" cy="100" r="24" fill="white"/>
+      <circle cx="181" cy="312" r="43" fill="black"/>
+      <circle cx="181" cy="312" r="24" fill="white"/>
+    </mask>
+  </defs>
+  <path fill="#D7C5A4" mask="url(#branches)" d="M61 12h222c183 0 190 235-24 235h-4c-11 0-13 7-6 17l88 124H9z"/>
+  <path fill="#5FAD83" d="M273 262h75l45 61h-76zM322 340h75l43 48h-75z"/>
+</svg>

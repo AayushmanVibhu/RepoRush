@@ -16,3 +16,5 @@
 - `SubmissionResult`: accepted and rejected variants share one data-driven component.
 
 Reuse these patterns before adding new surface, badge, toolbar, or status variants.
+
+Brand identity uses the icon-only parchment-and-green R in `public/logo.svg`, rendered through `BrandLogo`. Use it in the sidebar, workspace header, submission header, login header and login card without an adjacent wordmark or a colored tile. Functional Git branch icons remain Lucide icons. The browser favicon uses the same SVG asset.

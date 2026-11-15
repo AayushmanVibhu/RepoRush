@@ -4,6 +4,10 @@ export const metadata = {
   title: "RepoRush — Debug real code",
   description:
     "Practice debugging unfamiliar repositories through realistic engineering challenges.",
+  icons: {
+    icon: [{ url: "/logo.svg", type: "image/svg+xml" }],
+    shortcut: "/logo.svg",
+  },
 };
 export default function RootLayout({
   children,

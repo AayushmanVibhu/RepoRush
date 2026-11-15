@@ -39,6 +39,7 @@ import {
   type TestRow,
 } from "./challenges";
 import { LoginPanel } from "./login/login-panel";
+import { BrandLogo } from "./brand-logo";
 
 const Monaco = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 type Screen = "explorer" | "skills" | "progress" | "workspace" | "result";
@@ -52,7 +53,7 @@ type ProgressRecord = {
 function Mark() {
   return (
     <span className="mark">
-      <GitBranch size={14} />
+      <BrandLogo />
     </span>
   );
 }
@@ -91,7 +92,6 @@ function AppSidebar({
     <aside className="sidebar">
       <div className="brand">
         <Mark />
-        <strong>RepoRush</strong>
       </div>
       <nav>
         <button
@@ -789,7 +789,6 @@ function Workspace({
       <header className="workspace-bar">
         <button className="compact-brand" onClick={back}>
           <Mark />
-          <b>RepoRush</b>
         </button>
         <div className="breadcrumbs">
           <span>Challenges</span>
@@ -1185,7 +1184,6 @@ function Result({
       <header>
         <div className="brand">
           <Mark />
-          <strong>RepoRush</strong>
         </div>
         <span>Submission · {challenge.id}</span>
       </header>

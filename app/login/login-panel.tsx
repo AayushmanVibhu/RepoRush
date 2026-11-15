@@ -1,5 +1,6 @@
 "use client";
-import { ArrowRight, Check, GitBranch, Github, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Github, Sparkles } from "lucide-react";
+import { BrandLogo } from "../brand-logo";
 import { signIn } from "next-auth/react";
 import { challenges } from "../challenges";
 
@@ -9,9 +10,8 @@ export function LoginPanel() {
       <section className="login-story">
         <div className="login-brand">
           <span className="mark">
-            <GitBranch size={14} />
+            <BrandLogo />
           </span>
-          <strong>RepoRush</strong>
         </div>
         <div className="login-copy">
           <p className="eyebrow">Practice inside real code</p>
@@ -40,7 +40,7 @@ export function LoginPanel() {
       <section className="login-action">
         <div className="login-card">
           <span className="login-icon">
-            <GitBranch />
+            <BrandLogo />
           </span>
           <p className="eyebrow">Welcome</p>
           <h2>Continue to RepoRush</h2>

@@ -27,4 +27,6 @@
 @media(max-width:980px){.track-grid{grid-template-columns:1fr}.progress-layout{grid-template-columns:1fr}.track-skills{min-height:0}}@media(max-width:800px){.account-menu{position:fixed;left:66px;right:auto;bottom:14px;width:220px}.metric-grid{grid-template-columns:1fr}.insight-page{padding-left:82px}.catalog-head{align-items:flex-start;gap:18px}.continue-button{flex:0 0 auto}}
 
 /* Warm product ink and green authentication action */
+/* Icon-only brand mark from the supplied R artwork. */
+.mark{width:36px;height:32px;background:transparent;border-radius:0;flex:none}.compact-brand .mark{width:32px;height:28px}.brand-logo{display:block;width:100%;height:100%;object-fit:contain}.login-brand .mark{width:44px;height:40px}.login-icon{width:52px;height:48px;background:transparent;border-radius:0}
 .language,.time{color:#c8bda8}.issue-intro,.issue section p,.issue li{color:#b6b0a4}.idle-state p,.results-body pre,.skills-practiced i{color:#c5bba8}.login-copy li svg{color:var(--success)}.login-copy li:last-child svg{color:#9aaee7}.login-card>button{border-color:#75be94;background:#63aa7d;color:#09150f;box-shadow:0 8px 24px rgba(95,173,131,.12)}.login-card>button:hover{background:#70b78a}.login-icon{color:#8fc6a6}

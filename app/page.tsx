@@ -14,18 +14,17 @@ import {
   FileCode2,
   FileJson2,
   Files,
-  Filter,
   FolderOpen,
   GitBranch,
   LayoutDashboard,
-  PanelLeftClose,
-  PanelRightClose,
+  LogOut,
+  Mail,
   Play,
   RotateCcw,
   Search,
-  Settings,
   SlidersHorizontal,
   Sparkles,
+  Target,
   TerminalSquare,
   Trophy,
   X,
@@ -41,8 +40,14 @@ import {
 import { LoginPanel } from "./login/login-panel";
 
 const Monaco = dynamic(() => import("@monaco-editor/react"), { ssr: false });
-type Screen = "explorer" | "workspace" | "result";
+type Screen = "explorer" | "skills" | "progress" | "workspace" | "result";
 type FileBuffers = Record<string, string>;
+type CatalogScreen = "explorer" | "skills" | "progress";
+type ProgressRecord = {
+  challengeId: string;
+  status: string;
+  updatedAt?: string;
+};
 function Mark() {
   return (
     <span className="mark">
@@ -58,7 +63,22 @@ function DifficultyBadge({ value }: { value: Difficulty }) {
     </span>
   );
 }
-function AppSidebar({ name, image }: { name: string; image?: string | null }) {
+function AppSidebar({
+  active,
+  navigate,
+  name,
+  email,
+  image,
+  completed,
+}: {
+  active: CatalogScreen;
+  navigate: (screen: CatalogScreen) => void;
+  name: string;
+  email?: string | null;
+  image?: string | null;
+  completed: number;
+}) {
+  const [accountOpen, setAccountOpen] = useState(false);
   const initials =
     name
       .split(" ")
@@ -73,34 +93,75 @@ function AppSidebar({ name, image }: { name: string; image?: string | null }) {
         <strong>RepoRush</strong>
       </div>
       <nav>
-        <button className="active">
+        <button
+          className={active === "explorer" ? "active" : ""}
+          onClick={() => navigate("explorer")}
+        >
           <LayoutDashboard />
           <span>Challenges</span>
         </button>
-        <button disabled>
+        <button
+          className={active === "skills" ? "active" : ""}
+          onClick={() => navigate("skills")}
+        >
           <GitBranch />
           <span>Skill tracks</span>
-          <small>Soon</small>
         </button>
-        <button disabled>
+        <button
+          className={active === "progress" ? "active" : ""}
+          onClick={() => navigate("progress")}
+        >
           <Trophy />
           <span>Progress</span>
         </button>
       </nav>
       <div className="sidebar-bottom">
-        <button disabled>
-          <Settings />
-          <span>Settings</span>
-        </button>
+        {accountOpen && (
+          <div className="account-menu">
+            <div className="account-summary">
+              {image ? <img src={image} alt="" /> : <span>{initials}</span>}
+              <div>
+                <b>{name}</b>
+                {email && (
+                  <small>
+                    <Mail />
+                    {email}
+                  </small>
+                )}
+              </div>
+            </div>
+            <div className="account-metric">
+              <span>Completed challenges</span>
+              <b>{completed}</b>
+            </div>
+            <button
+              onClick={() => {
+                navigate("progress");
+                setAccountOpen(false);
+              }}
+            >
+              <Trophy />
+              View progress
+            </button>
+            <button
+              className="sign-out"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+            >
+              <LogOut />
+              Sign out
+            </button>
+          </div>
+        )}
         <button
           className="profile"
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          title="Sign out"
+          onClick={() => setAccountOpen((value) => !value)}
+          aria-expanded={accountOpen}
+          title="Open account menu"
         >
           {image ? <img src={image} alt="" /> : <span>{initials}</span>}
           <div>
             <b>{name}</b>
-            <small>Sign out</small>
+            <small>{completed} completed</small>
           </div>
           <ChevronsUpDown />
         </button>
@@ -111,49 +172,53 @@ function AppSidebar({ name, image }: { name: string; image?: string | null }) {
 
 function Explorer({
   open,
+  navigate,
   name,
+  email,
   image,
+  progress,
 }: {
   open: (c: Challenge) => void;
+  navigate: (screen: CatalogScreen) => void;
   name: string;
+  email?: string | null;
   image?: string | null;
+  progress: Record<string, ProgressRecord>;
 }) {
   const [query, setQuery] = useState("");
   const [difficulty, setDifficulty] = useState("All");
   const [language, setLanguage] = useState("All");
-  const [progress, setProgress] = useState<Record<string, string>>({});
-  useEffect(() => {
-    fetch("/api/progress")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data)
-          setProgress(
-            Object.fromEntries(
-              data.progress.map(
-                (row: { challengeId: string; status: string }) => [
-                  row.challengeId,
-                  row.status,
-                ],
-              ),
-            ),
-          );
-      });
-  }, []);
+  const [skill, setSkill] = useState("All");
+  const skillOptions = useMemo(
+    () => [...new Set(challenges.flatMap((c) => c.skills))].sort(),
+    [],
+  );
   const rows = useMemo(
     () =>
       challenges.filter(
         (c) =>
           (difficulty === "All" || c.difficulty === difficulty) &&
           (language === "All" || c.language === language) &&
+          (skill === "All" || c.skills.includes(skill)) &&
           (c.title + " " + c.skills.join(" "))
             .toLowerCase()
             .includes(query.toLowerCase()),
       ),
-    [query, difficulty, language],
+    [query, difficulty, language, skill],
   );
   return (
     <div className="app-shell">
-      <AppSidebar name={name} image={image} />
+      <AppSidebar
+        active="explorer"
+        navigate={navigate}
+        name={name}
+        email={email}
+        image={image}
+        completed={
+          Object.values(progress).filter((row) => row.status === "completed")
+            .length
+        }
+      />
       <main className="catalog">
         <header className="catalog-head">
           <div>
@@ -205,10 +270,18 @@ function Explorer({
             </select>
             <ChevronDown />
           </label>
-          <button className="filter-button">
-            <Filter />
-            Skills
-          </button>
+          <label>
+            <Target />
+            <select value={skill} onChange={(e) => setSkill(e.target.value)}>
+              <option value="All">All skills</option>
+              {skillOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            <ChevronDown />
+          </label>
         </section>
         <section className="table-wrap">
           <div className="table-title">
@@ -230,9 +303,9 @@ function Explorer({
               </div>
               {rows.map((c) => {
                 const status =
-                  progress[c.id] === "completed"
+                  progress[c.id]?.status === "completed"
                     ? "Completed"
-                    : progress[c.id] === "in-progress"
+                    : progress[c.id]?.status === "in-progress"
                       ? "In progress"
                       : "Not started";
                 return (
@@ -320,9 +393,6 @@ function FileTree({
           <Files />
           Explorer
         </span>
-        <button title="Collapse explorer">
-          <PanelLeftClose />
-        </button>
       </div>
       <div className="repo-title">
         <ChevronDown />
@@ -486,9 +556,6 @@ function IssuePanel({
           <Circle />
           Issue ticket
         </span>
-        <button title="Collapse issue panel">
-          <PanelRightClose />
-        </button>
       </div>
       <div className="issue-body">
         <div className="issue-meta">
@@ -566,7 +633,9 @@ function Workspace({
   const [running, setRunning] = useState(false);
   const [bottomOpen, setBottomOpen] = useState(true);
   const [tab, setTab] = useState<"tests" | "output">("tests");
-  const [saveState, setSaveState] = useState<"loading" | "saving" | "saved" | "local">("loading");
+  const [saveState, setSaveState] = useState<
+    "loading" | "saving" | "saved" | "local"
+  >("loading");
   const [left, setLeft] = useState(230);
   const [right, setRight] = useState(318);
   const drag = useRef<{ side: string; x: number; w: number } | null>(null);
@@ -595,7 +664,12 @@ function Workspace({
         fetch("/api/submissions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ challengeId: challenge.id, files, results: rows, durationMs }),
+          body: JSON.stringify({
+            challengeId: challenge.id,
+            files,
+            results: rows,
+            durationMs,
+          }),
         }).catch(() => undefined);
         finish(rows, durationMs);
       }
@@ -605,11 +679,18 @@ function Workspace({
     let active = true;
     remoteLoaded.current = false;
     fetch(`/api/progress/${encodeURIComponent(challenge.id)}`)
-      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then((data) => {
         if (!active || !data.progress?.files) return;
         const saved = data.progress.files as FileBuffers;
-        setFiles(Object.fromEntries(Object.entries(challenge.files).map(([path, starter]) => [path, typeof saved[path] === "string" ? saved[path] : starter])));
+        setFiles(
+          Object.fromEntries(
+            Object.entries(challenge.files).map(([path, starter]) => [
+              path,
+              typeof saved[path] === "string" ? saved[path] : starter,
+            ]),
+          ),
+        );
       })
       .catch(() => setSaveState("local"))
       .finally(() => {
@@ -618,9 +699,15 @@ function Workspace({
     fetch("/api/memory", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ challengeId: challenge.id, type: "challenge_started", summary: `Started a ${challenge.difficulty.toLowerCase()} ${challenge.language} challenge about ${challenge.skills.join(", ")}.` }),
+      body: JSON.stringify({
+        challengeId: challenge.id,
+        type: "challenge_started",
+        summary: `Started a ${challenge.difficulty.toLowerCase()} ${challenge.language} challenge about ${challenge.skills.join(", ")}.`,
+      }),
     }).catch(() => undefined);
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [challenge]);
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(files));
@@ -631,10 +718,12 @@ function Workspace({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ files, status: "in-progress" }),
-      }).then((response) => {
-        if (!response.ok) throw new Error("Save failed");
-        setSaveState("saved");
-      }).catch(() => setSaveState("local"));
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error("Save failed");
+          setSaveState("saved");
+        })
+        .catch(() => setSaveState("local"));
     }, 900);
     return () => window.clearTimeout(timer);
   }, [challenge.id, files, storageKey]);
@@ -682,7 +771,15 @@ function Workspace({
           <b>{challenge.id}</b>
           <i />
           <strong>{challenge.title}</strong>
-          <small className={`save-state ${saveState}`}>{saveState === "loading" ? "Loading workspace…" : saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : "Saved locally"}</small>
+          <small className={`save-state ${saveState}`}>
+            {saveState === "loading"
+              ? "Loading workspace…"
+              : saveState === "saving"
+                ? "Saving…"
+                : saveState === "saved"
+                  ? "Saved"
+                  : "Saved locally"}
+          </small>
         </div>
         <DifficultyBadge value={challenge.difficulty} />
         <div className="toolbar-actions">
@@ -728,12 +825,11 @@ function Workspace({
         />
         <section className="editor-stack">
           <div className="editor-tabs">
-            <button className="active">
+            <div className="active editor-tab">
               <FileCode2 />
               {name}
               {dirty.has(selected) && <i />}
-              <X />
-            </button>
+            </div>
           </div>
           <div className="editor">
             <Monaco
@@ -783,6 +879,262 @@ function Workspace({
         />
         <IssuePanel challenge={challenge} width={right} />
       </div>
+    </div>
+  );
+}
+
+function SkillTracks({
+  navigate,
+  open,
+  name,
+  email,
+  image,
+  progress,
+}: {
+  navigate: (screen: CatalogScreen) => void;
+  open: (challenge: Challenge) => void;
+  name: string;
+  email?: string | null;
+  image?: string | null;
+  progress: Record<string, ProgressRecord>;
+}) {
+  const completed = Object.values(progress).filter(
+    (row) => row.status === "completed",
+  ).length;
+  const tracks = (["JavaScript", "Python", "Java"] as const).map((language) => {
+    const items = challenges.filter(
+      (challenge) => challenge.language === language,
+    );
+    const finished = items.filter(
+      (challenge) => progress[challenge.id]?.status === "completed",
+    ).length;
+    const next =
+      items.find(
+        (challenge) => progress[challenge.id]?.status === "in-progress",
+      ) ||
+      items.find(
+        (challenge) => progress[challenge.id]?.status !== "completed",
+      ) ||
+      items[0];
+    return {
+      language,
+      items,
+      finished,
+      next,
+      skills: [...new Set(items.flatMap((item) => item.skills))].slice(0, 6),
+    };
+  });
+  return (
+    <div className="app-shell">
+      <AppSidebar
+        active="skills"
+        navigate={navigate}
+        name={name}
+        email={email}
+        image={image}
+        completed={completed}
+      />
+      <main className="catalog insight-page">
+        <header className="catalog-head">
+          <div>
+            <p className="eyebrow">Guided practice</p>
+            <h1>Skill tracks</h1>
+            <p>Build depth one ecosystem at a time.</p>
+          </div>
+          <div className="streak">
+            <GitBranch />
+            <span>
+              <b>{tracks.length} active tracks</b>
+              <small>{challenges.length} repository challenges</small>
+            </span>
+          </div>
+        </header>
+        <section className="track-grid">
+          {tracks.map((track) => {
+            const percent = Math.round(
+              (track.finished / track.items.length) * 100,
+            );
+            return (
+              <article className="track-card" key={track.language}>
+                <header>
+                  <span
+                    className={`track-mark ${track.language.toLowerCase()}`}
+                  >
+                    <Braces />
+                  </span>
+                  <div>
+                    <small>Language track</small>
+                    <h2>{track.language}</h2>
+                  </div>
+                  <b>{percent}%</b>
+                </header>
+                <div className="track-progress">
+                  <i style={{ width: `${percent}%` }} />
+                </div>
+                <p>
+                  {track.finished} of {track.items.length} challenges completed
+                </p>
+                <div className="track-skills">
+                  {track.skills.map((skill) => (
+                    <span key={skill}>{skill}</span>
+                  ))}
+                </div>
+                <button onClick={() => open(track.next)}>
+                  {track.finished ? "Continue track" : "Start track"}
+                  <ChevronRight />
+                </button>
+              </article>
+            );
+          })}
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function ProgressView({
+  navigate,
+  open,
+  name,
+  email,
+  image,
+  progress,
+}: {
+  navigate: (screen: CatalogScreen) => void;
+  open: (challenge: Challenge) => void;
+  name: string;
+  email?: string | null;
+  image?: string | null;
+  progress: Record<string, ProgressRecord>;
+}) {
+  const records = Object.values(progress);
+  const completed = records.filter((row) => row.status === "completed").length;
+  const inProgress = records.filter(
+    (row) => row.status === "in-progress",
+  ).length;
+  const recent = records
+    .filter((row) => row.updatedAt)
+    .sort(
+      (a, b) =>
+        new Date(b.updatedAt!).getTime() - new Date(a.updatedAt!).getTime(),
+    )
+    .slice(0, 6);
+  const next =
+    challenges.find((item) => progress[item.id]?.status === "in-progress") ||
+    challenges.find((item) => !progress[item.id]) ||
+    challenges[0];
+  return (
+    <div className="app-shell">
+      <AppSidebar
+        active="progress"
+        navigate={navigate}
+        name={name}
+        email={email}
+        image={image}
+        completed={completed}
+      />
+      <main className="catalog insight-page">
+        <header className="catalog-head">
+          <div>
+            <p className="eyebrow">Learning record</p>
+            <h1>Your progress</h1>
+            <p>A clear view of the work you have shipped.</p>
+          </div>
+          <button className="continue-button" onClick={() => open(next)}>
+            Continue practice
+            <ChevronRight />
+          </button>
+        </header>
+        <section className="metric-grid">
+          <article>
+            <small>Completed</small>
+            <strong>{completed}</strong>
+            <span>of {challenges.length} challenges</span>
+          </article>
+          <article>
+            <small>In progress</small>
+            <strong>{inProgress}</strong>
+            <span>active workspaces</span>
+          </article>
+          <article>
+            <small>Completion</small>
+            <strong>
+              {Math.round((completed / challenges.length) * 100)}%
+            </strong>
+            <span>across all tracks</span>
+          </article>
+        </section>
+        <section className="progress-layout">
+          <article className="progress-card">
+            <header>
+              <div>
+                <h2>Language progress</h2>
+                <p>Completion across each practice track.</p>
+              </div>
+            </header>
+            {(["JavaScript", "Python", "Java"] as const).map((language) => {
+              const items = challenges.filter(
+                (item) => item.language === language,
+              );
+              const count = items.filter(
+                (item) => progress[item.id]?.status === "completed",
+              ).length;
+              const percent = Math.round((count / items.length) * 100);
+              return (
+                <div className="language-progress" key={language}>
+                  <span>
+                    <b>{language}</b>
+                    <small>
+                      {count}/{items.length}
+                    </small>
+                  </span>
+                  <div>
+                    <i style={{ width: `${percent}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </article>
+          <article className="progress-card">
+            <header>
+              <div>
+                <h2>Recent activity</h2>
+                <p>Your latest saved workspaces.</p>
+              </div>
+            </header>
+            {recent.length ? (
+              recent.map((record) => {
+                const item = challenges.find(
+                  (challenge) => challenge.id === record.challengeId,
+                );
+                return item ? (
+                  <button
+                    className="activity-row"
+                    key={record.challengeId}
+                    onClick={() => open(item)}
+                  >
+                    <span className={`activity-state ${record.status}`}>
+                      {record.status === "completed" ? <Check /> : <Circle />}
+                    </span>
+                    <span>
+                      <b>{item.title}</b>
+                      <small>
+                        {item.language} · {record.status.replace("-", " ")}
+                      </small>
+                    </span>
+                    <ChevronRight />
+                  </button>
+                ) : null;
+              })
+            ) : (
+              <div className="progress-empty">
+                <Target />
+                <p>Your saved challenge activity will appear here.</p>
+              </div>
+            )}
+          </article>
+        </section>
+      </main>
     </div>
   );
 }
@@ -892,20 +1244,69 @@ function Result({
 export default function Page() {
   const { data: session, status } = useSession();
   const [screen, setScreen] = useState<Screen>("explorer");
+  const [progress, setProgress] = useState<Record<string, ProgressRecord>>({});
   const [challenge, setChallenge] = useState(challenges[0]);
   const [submission, setSubmission] = useState<{ rows: TestRow[]; ms: number }>(
     { rows: [], ms: 0 },
   );
-  if (status === "loading") return <div className="session-loading"><span className="spinner"/>Loading RepoRush…</div>;
-  if (!session?.user) return <LoginPanel/>;
+  const loadProgress = () =>
+    fetch("/api/progress")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (data)
+          setProgress(
+            Object.fromEntries(
+              data.progress.map((row: ProgressRecord) => [
+                row.challengeId,
+                row,
+              ]),
+            ),
+          );
+      })
+      .catch(() => undefined);
+  useEffect(() => {
+    if (session?.user?.id) loadProgress();
+  }, [session?.user?.id]);
+  if (status === "loading")
+    return (
+      <div className="session-loading">
+        <span className="spinner" />
+        Loading RepoRush…
+      </div>
+    );
+  if (!session?.user) return <LoginPanel />;
+  const name = session.user.name || session.user.email || "Developer";
+  const navigate = (destination: CatalogScreen) => setScreen(destination);
+  const open = (item: Challenge) => {
+    setChallenge(item);
+    setScreen("workspace");
+  };
   return screen === "explorer" ? (
     <Explorer
-      name={session.user.name || session.user.email || "Developer"}
+      name={name}
+      email={session.user.email}
       image={session.user.image}
-      open={(c) => {
-        setChallenge(c);
-        setScreen("workspace");
-      }}
+      progress={progress}
+      navigate={navigate}
+      open={open}
+    />
+  ) : screen === "skills" ? (
+    <SkillTracks
+      name={name}
+      email={session.user.email}
+      image={session.user.image}
+      progress={progress}
+      navigate={navigate}
+      open={open}
+    />
+  ) : screen === "progress" ? (
+    <ProgressView
+      name={name}
+      email={session.user.email}
+      image={session.user.image}
+      progress={progress}
+      navigate={navigate}
+      open={open}
     />
   ) : screen === "workspace" ? (
     <Workspace
@@ -915,6 +1316,7 @@ export default function Page() {
       finish={(rows, ms) => {
         setSubmission({ rows, ms });
         setScreen("result");
+        window.setTimeout(loadProgress, 1000);
       }}
     />
   ) : (

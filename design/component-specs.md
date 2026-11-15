@@ -1,6 +1,9 @@
 # Component specifications
 
-- `AppSidebar`: 220px desktop rail; 58px icon rail below 800px. Disabled destinations are visibly unavailable.
+- `AppSidebar`: 220px desktop rail; 58px icon rail below 800px. Every visible destination opens a real product view. The profile opens an account menu; sign-out is never the profile row's primary action.
+- `SkillTracks`: language-level practice tracks with completion, covered skills, and a real next-challenge action.
+- `ProgressOverview`: MongoDB-backed completion metrics, language progress, recent activity, and a continue action.
+- `AccountMenu`: identity, email, completion count, progress navigation, and an explicit sign-out action.
 - `ChallengeTable`: compact rows with challenge hierarchy first, followed by language, skills, difficulty, time, and status.
 - `ChallengeDefinition`: one self-contained repository contract containing language, difficulty, ticket content, file map, entry file, and evaluator. Never reuse another challenge's repository or ticket.
 - `ProgressiveHints`: three ordered hints revealed one at a time. Hints guide investigation without inserting code or exposing hidden checks.

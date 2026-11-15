@@ -103,7 +103,6 @@ export async function POST(request: NextRequest) {
     const body = JSON.parse(raw);
     const challenge = getChallenge(body.challengeId);
     if (
-      body.consent !== true ||
       !COACH_MODES.includes(body.mode) ||
       typeof body.question !== "string" ||
       !body.question.trim() ||
@@ -111,7 +110,7 @@ export async function POST(request: NextRequest) {
       typeof body.selected !== "string"
     )
       throw new CoachError(
-        "Confirm code-sharing consent and provide a valid question.",
+        "Provide a valid question and coaching mode.",
       );
     const files = validateFiles(body.files);
     if (!(body.selected in files))

@@ -1053,6 +1053,7 @@ function ProgressView({
   email,
   image,
   progress,
+  onDeleteProgress,
 }: {
   navigate: (screen: CatalogScreen) => void;
   open: (challenge: Challenge) => void;
@@ -1060,7 +1061,18 @@ function ProgressView({
   email?: string | null;
   image?: string | null;
   progress: Record<string, ProgressRecord>;
+  onDeleteProgress: () => Promise<void>;
 }) {
+  const [deleting, setDeleting] = useState(false);
+  const [deleteNotice, setDeleteNotice] = useState('');
+  const [deleteFailed, setDeleteFailed] = useState(false);
+  const deleteProgress = async () => {
+    if (deleting || !window.confirm('Delete all your challenge progress, saved code, hint counts and submission history? This cannot be undone. Your account and AI learning memory will remain.')) return;
+    setDeleting(true); setDeleteNotice(''); setDeleteFailed(false);
+    try {await onDeleteProgress(); setDeleteNotice('Your challenge progress has been deleted.');}
+    catch (error) {setDeleteFailed(true); setDeleteNotice((error as Error).message);}
+    finally {setDeleting(false);}
+  };
   const records = Object.values(progress);
   const completed = records.filter((row) => row.status === "completed").length;
   const inProgress = records.filter(
@@ -1094,11 +1106,17 @@ function ProgressView({
             <h1>Your progress</h1>
             <p>A clear view of the work you have shipped.</p>
           </div>
-          <button className="continue-button" onClick={() => open(next)}>
+          <div className="progress-actions">
+          <button className="continue-button delete-progress-button" onClick={() => void deleteProgress()} disabled={deleting}>
+            <XCircle />{deleting ? 'Deleting…' : 'Delete progress'}
+          </button>
+          <button className="continue-button" onClick={() => open(next)} disabled={deleting}>
             Continue practice
             <ChevronRight />
           </button>
+          </div>
         </header>
+        {deleteNotice && <p className={`progress-delete-notice ${deleteFailed ? 'failed' : ''}`} role={deleteFailed ? 'alert' : 'status'}>{deleteNotice}</p>}
         <section className="metric-grid">
           <article>
             <small>Completed</small>
@@ -1298,15 +1316,17 @@ export default function Page() {
   const { data: session, status } = useSession();
   const [screen, setScreen] = useState<Screen>("explorer");
   const [progress, setProgress] = useState<Record<string, ProgressRecord>>({});
+  const progressVersion = useRef(0);
   const [challenge, setChallenge] = useState(challenges[0]);
   const [submission, setSubmission] = useState<{ rows: TestRow[]; ms: number }>(
     { rows: [], ms: 0 },
   );
-  const loadProgress = () =>
-    fetch("/api/progress")
+  const loadProgress = () => {
+    const version = progressVersion.current;
+    return fetch("/api/progress", {cache: 'no-store'})
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
-        if (data)
+        if (data && version === progressVersion.current)
           setProgress(
             Object.fromEntries(
               data.progress.map((row: ProgressRecord) => [
@@ -1317,6 +1337,16 @@ export default function Page() {
           );
       })
       .catch(() => undefined);
+  };
+  const deleteProgress = async () => {
+    progressVersion.current++;
+    const response = await fetch('/api/progress', {method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({confirmation: 'delete-my-progress'})});
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Could not delete your progress. Please retry.');
+    setProgress({});
+    try {for (const item of challenges) localStorage.removeItem(`rr-files-${item.id}`);}
+    catch {throw new Error('Database progress was deleted, but browser drafts could not be cleared. Please retry.');}
+  };
   useEffect(() => {
     if (session?.user?.id) loadProgress();
   }, [session?.user?.id]);
@@ -1358,6 +1388,7 @@ export default function Page() {
       email={session.user.email}
       image={session.user.image}
       progress={progress}
+      onDeleteProgress={deleteProgress}
       navigate={navigate}
       open={open}
     />

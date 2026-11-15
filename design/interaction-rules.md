@@ -4,6 +4,10 @@ Challenge rows open that challenge's own repository, issue ticket, and evaluator
 
 Hints unlock in three steps: directional, diagnostic, then near-solution. The interface records and displays the number revealed for the active attempt. Repository metadata must include a license/source label when adapted from external material.
 
+In the AI coach prompt, Enter submits through the same form as Ask coach; Shift+Enter inserts a new line. Submission requires a nonempty prompt and an idle coach. Enter used to compose text with an input method does not submit.
+
+Progress offers Delete progress with an explicit confirmation before removing the signed-in account's challenge records, submissions, regression history and local drafts. It stops an active Linux workspace, updates shared completion metrics, and leaves account identity and AI learning memory intact. Cancellation performs no deletion; errors remain visible and allow retry.
+
 Horizontal workspace handles resize the explorer and ticket panels within safe bounds. On narrow layouts, both secondary panels collapse to prioritize the editor. Errors must explain the failed behavior without exposing hidden tests or a reference solution.
 
 Drag the divider above the bottom-panel tabs up to enlarge the panel or down to give space back to the editor. The divider also supports Up/Down arrows and Home/End when focused. Its height persists on this device across tabs and reopening; double-click resets the default. Resizing retains editor and terminal minimum space and responds to window size changes.

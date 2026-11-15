@@ -35,7 +35,6 @@ export function AICoach({
   const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [mode, setMode] = useState<CoachMode>("hint");
   const [question, setQuestion] = useState("");
-  const [consent, setConsent] = useState(false);
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [configured, setConfigured] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -59,7 +58,7 @@ export function AICoach({
           setMessages(data.messages);
           setConfigured(data.configured);
           setEnabled(data.memoryEnabled);
-          setStatus(data.memoryEnabled ? 'ready' : 'off');
+          setStatus(data.memoryEnabled ? "ready" : "off");
         }
       })
       .catch((e) => {
@@ -78,7 +77,10 @@ export function AICoach({
     setNotice("");
     try {
       const data = await api("/api/coach/memory", json(body));
-      if (typeof data.enabled === "boolean") {setEnabled(data.enabled); setStatus(data.enabled ? 'ready' : 'off');}
+      if (typeof data.enabled === "boolean") {
+        setEnabled(data.enabled);
+        setStatus(data.enabled ? "ready" : "off");
+      }
       if (data.forgotten) {
         setMemories([]);
         setStatus("off");
@@ -119,7 +121,7 @@ export function AICoach({
   }
   async function ask(event: React.FormEvent) {
     event.preventDefault();
-    if (busy || !question.trim() || !consent) return;
+    if (busy || !configured || !question.trim()) return;
     setError("");
     setPending("");
     setBusy(true);
@@ -140,13 +142,15 @@ export function AICoach({
           challengeId: challenge.id,
           mode,
           question,
-          consent,
           selected,
           selection,
           files: shared,
           output,
         }),
-        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(95000)]),
+        signal: AbortSignal.any([
+          controller.signal,
+          AbortSignal.timeout(95000),
+        ]),
       });
       if (!response.ok) {
         const data = await response.json();
@@ -183,8 +187,8 @@ export function AICoach({
         (e as Error).name === "TimeoutError"
           ? "The coach took too long to respond. Please retry."
           : (e as Error).name === "AbortError"
-          ? "Response stopped. Partial text was not saved."
-          : (e as Error).message,
+            ? "Response stopped. Partial text was not saved."
+            : (e as Error).message,
       );
     } finally {
       setBusy(false);
@@ -239,7 +243,8 @@ export function AICoach({
           {selection ? " · highlighted code included" : ""}
         </span>
         <button onClick={() => setSettings(!settings)}>
-          Learning memory {enabled === null ? "loading…" : enabled ? "on" : "off"}
+          Learning memory{" "}
+          {enabled === null ? "loading…" : enabled ? "on" : "off"}
         </button>
         <button
           disabled={busy}
@@ -305,9 +310,11 @@ export function AICoach({
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                void memoryAction({ action: "remember", text: note }).then(saved => {
-                  if (saved) setNote("");
-                });
+                void memoryAction({ action: "remember", text: note }).then(
+                  (saved) => {
+                    if (saved) setNote("");
+                  },
+                );
               }}
             >
               <input
@@ -409,16 +416,6 @@ export function AICoach({
         <div ref={bottom} />
       </div>
       <form className="coach-compose" onSubmit={ask}>
-        <label className="coach-consent">
-          <input
-            type="checkbox"
-            checked={consent}
-            onChange={(e) => setConsent(e.target.checked)}
-          />{" "}
-          Share up to 3 code files, highlighted code and recent output with
-          Gemini. Free-tier data may improve Google products; avoid confidential
-          code.
-        </label>
         <div>
           <textarea
             aria-label="Question for the coach"
@@ -426,11 +423,23 @@ export function AICoach({
             rows={2}
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={(e) => {
+              if (
+                e.key !== "Enter" ||
+                e.shiftKey ||
+                e.nativeEvent.isComposing ||
+                e.keyCode === 229
+              )
+                return;
+              e.preventDefault();
+              if (!e.repeat && configured && !busy && question.trim()) {
+                e.currentTarget.form?.requestSubmit();
+              }
+            }}
+            title="Enter to send; Shift+Enter for a new line"
             placeholder="What should I inspect next?"
           />
-          <button
-            disabled={!configured || !consent || busy || !question.trim()}
-          >
+          <button disabled={!configured || busy || !question.trim()}>
             Ask coach
           </button>
           {busy && (

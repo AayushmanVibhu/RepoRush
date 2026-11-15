@@ -40,6 +40,8 @@ import {
 } from "./challenges";
 import { LoginPanel } from "./login/login-panel";
 import { BrandLogo } from "./brand-logo";
+import { LinuxTerminal, linuxRequest } from "./linux-terminal";
+import { executionPlan, validateFiles } from "@/lib/sandbox-policy";
 
 const Monaco = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 type Screen = "explorer" | "skills" | "progress" | "workspace" | "result";
@@ -394,24 +396,26 @@ function Explorer({
 
 function FileTree({
   challenge,
+  files,
   selected,
   setSelected,
   dirty,
 }: {
   challenge: Challenge;
+  files: FileBuffers;
   selected: string;
   setSelected: (s: string) => void;
   dirty: Set<string>;
 }) {
   const groups = useMemo(() => {
     const map = new Map<string, string[]>();
-    Object.keys(challenge.files).forEach((path) => {
+    Object.keys(files).forEach((path) => {
       const parts = path.split("/");
       const folder = parts.length > 1 ? parts.slice(0, -1).join("/") : "";
       map.set(folder, [...(map.get(folder) || []), path]);
     });
     return [...map.entries()];
-  }, [challenge]);
+  }, [files]);
   return (
     <div className="file-panel">
       <div className="panel-title">
@@ -457,12 +461,7 @@ function loadFiles(c: Challenge): FileBuffers {
   if (typeof window === "undefined") return { ...c.files };
   try {
     const saved = JSON.parse(localStorage.getItem(`rr-files-${c.id}`) || "{}");
-    return Object.fromEntries(
-      Object.entries(c.files).map(([p, s]) => [
-        p,
-        typeof saved[p] === "string" ? saved[p] : s,
-      ]),
-    );
+    return Object.keys(saved).length ? validateFiles(saved) : {...c.files};
   } catch {
     return { ...c.files };
   }
@@ -474,15 +473,19 @@ function ResultsPanel({
   tab,
   setTab,
   close,
+  terminal,
+  output,
 }: {
   running: boolean;
   results: TestRow[];
-  tab: "tests" | "output";
-  setTab: (t: "tests" | "output") => void;
+  tab: "tests" | "output" | "terminal";
+  setTab: (t: "tests" | "output" | "terminal") => void;
   close: () => void;
+  terminal: React.ReactNode;
+  output: string;
 }) {
   return (
-    <section className="results-panel">
+    <section className={`results-panel ${tab === "terminal" ? "terminal-open" : ""}`}>
       <header>
         <div>
           <button
@@ -504,16 +507,20 @@ function ResultsPanel({
             <TerminalSquare />
             Output
           </button>
+          <button className={tab === "terminal" ? "active" : ""} onClick={() => setTab("terminal")}>
+            <TerminalSquare /> Linux terminal
+          </button>
         </div>
         <button title="Close panel" onClick={close}>
           <X />
         </button>
       </header>
       <div className="results-body">
-        {running ? (
+        <div className="linux-frame" hidden={tab !== "terminal"}>{terminal}</div>
+        {tab === "terminal" ? null : running ? (
           <div className="running-state">
             <span className="spinner" />
-            Running public test suite…
+            Running checks…
           </div>
         ) : results.length === 0 ? (
           <div className="idle-state">
@@ -538,7 +545,7 @@ function ResultsPanel({
           </div>
         ) : (
           <pre>
-            {results
+            {output || results
               .map((r) => `${r.pass ? "PASS" : "FAIL"}  ${r.name}\n`)
               .join("")}
             \n{results.filter((r) => r.pass).length} passed,{" "}
@@ -658,7 +665,8 @@ function Workspace({
   const [results, setResults] = useState<TestRow[]>([]);
   const [running, setRunning] = useState(false);
   const [bottomOpen, setBottomOpen] = useState(true);
-  const [tab, setTab] = useState<"tests" | "output">("tests");
+  const [tab, setTab] = useState<"tests" | "output" | "terminal">("tests");
+  const [output, setOutput] = useState("");
   const [saveState, setSaveState] = useState<
     "loading" | "saving" | "saved" | "local"
   >("loading");
@@ -669,37 +677,46 @@ function Workspace({
   const dirty = useMemo(
     () =>
       new Set(
-        Object.keys(challenge.files).filter(
+        [...new Set([...Object.keys(challenge.files), ...Object.keys(files)])].filter(
           (p) => files[p] !== challenge.files[p],
         ),
       ),
     [challenge, files],
   );
   const storageKey = `rr-files-${challenge.id}`;
-  const execute = (submit = false) => {
+  const execute = async (submit = false) => {
+    if (running) return;
     setRunning(true);
     setBottomOpen(true);
     setTab("tests");
     const start = performance.now();
-    setTimeout(() => {
-      const rows = challenge.evaluate(files);
-      const durationMs = Math.max(84, Math.round(performance.now() - start));
-      setResults(rows);
-      setRunning(false);
+    setOutput("");
+    try {
+      let data: {results: TestRow[]; durationMs: number; output: string};
       if (submit) {
-        fetch("/api/submissions", {
+        const response = await fetch("/api/submissions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             challengeId: challenge.id,
             files,
-            results: rows,
-            durationMs,
           }),
-        }).catch(() => undefined);
-        finish(rows, durationMs);
+        });
+        data = await response.json();
+        if (!response.ok) throw new Error((data as unknown as {error: string}).error || "Submission failed.");
+      } else if (executionPlan(challenge.id)) {
+        data = await linuxRequest("run", challenge.id, {files});
+      } else {
+        data = {results: challenge.evaluate(files), durationMs: Math.round(performance.now() - start), output: "Static source checks only. This challenge does not yet have a configured sandbox regression suite. You can still run its tools in the Linux terminal."};
       }
-    }, 550);
+      setResults(data.results);
+      setOutput(data.output);
+      if (submit) finish(data.results, data.durationMs);
+    } catch (error) {
+      const message = (error as Error).message;
+      setResults([{name: "Execution unavailable", pass: false, detail: message}]);
+      setOutput(message);
+    } finally {setRunning(false);}
   };
   useEffect(() => {
     let active = true;
@@ -709,14 +726,7 @@ function Workspace({
       .then((data) => {
         if (!active || !data.progress?.files) return;
         const saved = data.progress.files as FileBuffers;
-        setFiles(
-          Object.fromEntries(
-            Object.entries(challenge.files).map(([path, starter]) => [
-              path,
-              typeof saved[path] === "string" ? saved[path] : starter,
-            ]),
-          ),
-        );
+        setFiles(validateFiles(saved));
       })
       .catch(() => setSaveState("local"))
       .finally(() => {
@@ -755,6 +765,7 @@ function Workspace({
   }, [challenge.id, files, storageKey]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
+      if (e.target instanceof Element && e.target.closest(".linux-panel")) return;
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
         e.preventDefault();
         execute();
@@ -766,7 +777,7 @@ function Workspace({
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [files, storageKey]);
+  }, [files, storageKey, running]);
   useEffect(() => {
     const move = (e: MouseEvent) => {
       if (!drag.current) return;
@@ -784,6 +795,9 @@ function Workspace({
     };
   }, []);
   const name = selected.split("/").at(-1);
+  useEffect(() => {
+    if (!(selected in files)) setSelected(challenge.entryFile in files ? challenge.entryFile : Object.keys(files)[0] || challenge.entryFile);
+  }, [files, selected, challenge.entryFile]);
   return (
     <div className="workspace">
       <header className="workspace-bar">
@@ -813,6 +827,7 @@ function Workspace({
             onClick={() => {
               setFiles({ ...challenge.files });
               setResults([]);
+              setOutput("");
             }}
           >
             <RotateCcw />
@@ -820,7 +835,7 @@ function Workspace({
           </button>
           <button className="run" disabled={running} onClick={() => execute()}>
             <Play />
-            {running ? "Running…" : "Run tests"}
+            {running ? "Running…" : executionPlan(challenge.id) ? "Run tests" : "Static checks"}
             <kbd>⌘↵</kbd>
           </button>
           <button
@@ -837,6 +852,7 @@ function Workspace({
         <aside style={{ width: left }}>
           <FileTree
             challenge={challenge}
+            files={files}
             selected={selected}
             setSelected={setSelected}
             dirty={dirty}
@@ -862,7 +878,7 @@ function Workspace({
               path={`file:///${challenge.repoName}/${selected}`}
               height="100%"
               language={languageForPath(selected)}
-              value={files[selected]}
+              value={files[selected] ?? ""}
               onChange={(v) => setFiles((f) => ({ ...f, [selected]: v ?? "" }))}
               theme="vs-dark"
               options={{
@@ -884,6 +900,8 @@ function Workspace({
               tab={tab}
               setTab={setTab}
               close={() => setBottomOpen(false)}
+              output={output}
+              terminal={<LinuxTerminal challengeId={challenge.id} files={files} onFilesChange={setFiles} visible={tab === "terminal"} />}
             />
           )}{" "}
           {!bottomOpen && (

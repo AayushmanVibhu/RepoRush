@@ -45,6 +45,10 @@ for (const spec of specs) {
     `import assert from 'node:assert/strict';\nimport test from 'node:test';\nimport * as module from '${importPath}';\nconst fn = module.default;\n\n${spec.checks.map((check, index) => `test('regression ${index + 1}', {timeout: 1500}, async () => {\n  ${check}\n});`).join("\n\n")}\n`;
   files["REPORUSH.md"] =
     `# RepoRush training fork\n\nUpstream: https://github.com/${spec.repo}\nRevision: ${commit} (${spec.tag})\nFork: https://github.com/AayushmanVibhu/${name}\n\n${spec.problem}\n\n## Expected behavior\n${spec.expected}\n\n## Run the regression\nUse Node.js 20 or newer. Run npm install --ignore-scripts.\n${name === "fast-deep-equal" ? "Then run node build.js to generate the JavaScript variants from src/index.jst.\n" : ""}Run node --test reporush/regression.test.mjs. Run npm test for the upstream suite.\n\nUpstream source, documentation and licenses are retained. One intentional source mutation and this regression test were added for training.\nBinary/oversized files omitted: ${omitted.join(", ") || "none"}.\n\nThe browser Run/Submit buttons perform static patch checks; run the Node regression for behavioral verification.\n`;
+  files["REPORUSH.md"] = files["REPORUSH.md"].replace(
+    "The browser Run/Submit buttons perform static patch checks; run the Node regression for behavioral verification.",
+    "Run tests and Submit execute this regression in a fresh Linux sandbox. Use the Linux terminal for manual commands; the complete upstream suite remains separate.",
+  );
   writeFileSync(
     join(output, `${name}.json`),
     JSON.stringify(

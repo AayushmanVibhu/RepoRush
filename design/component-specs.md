@@ -17,4 +17,6 @@
 
 Reuse these patterns before adding new surface, badge, toolbar, or status variants.
 
+- `LinuxTerminal`: a third bottom-panel tab using xterm.js and the existing surface/text tokens. Start/stop are explicit, provisioning has a busy state, connection status is readable, and file conflicts require a clear choice between editor and Linux contents. Interactive commands stay in E2B. The panel grows to 340px on desktop and 300px on narrow screens.
+
 Brand identity uses the icon-only parchment-and-green R in `public/logo.svg`, rendered through `BrandLogo`. Use it in the sidebar, workspace header, submission header, login header and login card without an adjacent wordmark or a colored tile. Functional Git branch icons remain Lucide icons. The browser favicon uses the same SVG asset.

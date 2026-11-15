@@ -2,17 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getDatabase } from "@/lib/mongodb";
 import { rememberLearningEvent } from "@/lib/supermemory";
+import { getChallenge, runVerifiedTests } from "@/lib/linux-sandbox";
+import {
+  executionPlan,
+  SandboxProblem,
+  validateFiles,
+} from "@/lib/sandbox-policy";
+
+export const runtime = "nodejs";
+export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await request.json();
-  if (
-    typeof body.challengeId !== "string" ||
-    !Array.isArray(body.results) ||
-    !body.files
-  ) {
+  if (typeof body.challengeId !== "string" || !body.files) {
     return NextResponse.json({ error: "Invalid submission" }, { status: 400 });
   }
   const files = Object.entries(body.files as Record<string, unknown>);
@@ -30,9 +35,30 @@ export async function POST(request: NextRequest) {
       { status: 413 },
     );
   }
+  let grading;
+  try {
+    const challenge = getChallenge(body.challengeId);
+    const submittedFiles = validateFiles(body.files);
+    grading = executionPlan(challenge.id)
+      ? await runVerifiedTests(session.user.id, challenge, submittedFiles)
+      : {
+          results: challenge.evaluate(submittedFiles),
+          durationMs: 0,
+          output: "Static checks only for this challenge.",
+        };
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof SandboxProblem
+            ? error.message
+            : "Could not verify this submission. Please retry.",
+      },
+      { status: error instanceof SandboxProblem ? error.status : 502 },
+    );
+  }
   const passed =
-    body.results.length > 0 &&
-    body.results.every((row: { pass?: boolean }) => row.pass === true);
+    grading.results.length > 0 && grading.results.every((row) => row.pass);
   const now = new Date();
   const db = await getDatabase();
   await Promise.all([
@@ -40,9 +66,9 @@ export async function POST(request: NextRequest) {
       userId: session.user.id,
       challengeId: body.challengeId,
       files: body.files,
-      results: body.results,
+      results: grading.results,
       passed,
-      durationMs: Number(body.durationMs) || 0,
+      durationMs: grading.durationMs,
       submittedAt: now,
     }),
     db.collection("challengeProgress").updateOne(
@@ -65,7 +91,7 @@ export async function POST(request: NextRequest) {
     type: passed ? "submission_passed" : "submission_failed",
     summary: passed
       ? "Completed the challenge successfully."
-      : `${body.results.filter((row: { pass?: boolean }) => !row.pass).length} checks remained failing.`,
+      : `${grading.results.filter((row) => !row.pass).length} checks remained failing.`,
   }).catch(() => undefined);
-  return NextResponse.json({ submitted: true, passed });
+  return NextResponse.json({ submitted: true, passed, ...grading });
 }

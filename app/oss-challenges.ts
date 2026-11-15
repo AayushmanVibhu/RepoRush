@@ -142,7 +142,7 @@ export const ossChallenges: Challenge[] = tickets.map((ticket) => ({
     "Do not weaken regression or upstream tests.",
     "Fix the source rather than hard-coding regression inputs.",
   ],
-  note: "Real MIT-licensed upstream repository snapshot. The bug is intentionally introduced for training. Browser checks are static patch checks, not execution of the upstream suite; use the included Node regression for behavioral verification.",
+  note: "Real MIT-licensed upstream repository snapshot with an intentional training bug. Run tests and Submit execute the supplied regression in a fresh Linux sandbox; this is the focused regression, not the complete upstream suite. Use the terminal for exploration and manual commands.",
   hints: ticket.hints,
   source: {
     label: `${ticket.snapshot.repository} @ ${ticket.snapshot.commit.slice(0, 7)}`,

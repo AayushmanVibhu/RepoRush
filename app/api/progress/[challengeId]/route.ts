@@ -57,7 +57,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     {
       $set: {
         files: body.files,
-        status: body.status === "completed" ? "completed" : "in-progress",
+        // Completion is awarded only by the server-verified submissions endpoint.
+        status: "in-progress",
         updatedAt: now,
       },
       $setOnInsert: {

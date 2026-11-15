@@ -27,7 +27,7 @@ export const interviewChallenges: Challenge[] = snapshots.map((snapshot) => ({
     "Preserve source attribution and licenses.",
     "Use general behavior rather than hard-coding the supplied test inputs.",
   ],
-  note: "Company-published assessment adapted for RepoRush practice, with no endorsement implied. Browser checks inspect source structure only; run the included runtime regression for behavioral verification. See ATTRIBUTION.md for what is original versus adapted.",
+  note: "Company-published assessment adapted for RepoRush practice, with no endorsement implied. Run tests and Submit execute the supplied regression in a fresh Linux sandbox. Use the terminal for exploration. See ATTRIBUTION.md for what is original versus adapted.",
   hints: snapshot.hints as [string, string, string],
   source: {
     label: `${snapshot.company} · ${snapshot.mode}`,

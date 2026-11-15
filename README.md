@@ -1,6 +1,7 @@
 # RepoRush
 
 A production-minded debugging practice interface built with Next.js, TypeScript, Monaco Editor, MongoDB, Auth.js, Supermemory, and Lucide.
+https://youtu.be/F_L8Opdw8kQ
 
 ## Architecture
 

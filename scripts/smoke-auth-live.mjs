@@ -134,7 +134,7 @@ try {
     "CredentialsSignin",
   );
   assert.ok(
-    !(await json(await anonymous.request("/api/auth/session"))).user,
+    !(await json(await anonymous.request("/api/auth/session")))?.user,
     "Wrong password must not create a session",
   );
   const signed = await login(
@@ -147,6 +147,7 @@ try {
     "Credentials login must succeed",
   );
   const session = await json(await anonymous.request("/api/auth/session"));
+  assert.ok(session?.user,'Credentials login must create a session');
   assert.equal(session.user.username, fixture.username);
   assert.ok(session.user.id);
   assert.ok(!JSON.stringify(session).includes(fixture.password));
@@ -157,9 +158,9 @@ try {
   assert.ok(
     anonymous.sessionHeaders.every(
       (value) =>
-        /httponly/i.test(value) &&
-        /secure/i.test(value) &&
-        /samesite=lax/i.test(value),
+        /;\s*httponly(?:;|$)/i.test(value) &&
+        /;\s*secure(?:;|$)/i.test(value) &&
+        /;\s*samesite=lax(?:;|$)/i.test(value),
     ),
     "Session cookies must be HttpOnly, Secure and SameSite=Lax",
   );
@@ -205,7 +206,7 @@ try {
     }).toString(),
   });
   assert.ok(
-    !(await json(await anonymous.request("/api/auth/session"))).user,
+    !(await json(await anonymous.request("/api/auth/session")))?.user,
     "Sign-out must clear the session",
   );
   const again = await login(anonymous, fixture.username, fixture.password);

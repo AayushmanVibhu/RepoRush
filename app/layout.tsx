@@ -1,6 +1,7 @@
 import "./globals.css";
 import "./coach.css";
 import "./file-tree.css";
+import "./auth.css";
 import "@xterm/xterm/css/xterm.css";
 import { Providers } from "./providers";
 export const metadata = {

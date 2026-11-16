@@ -12,6 +12,8 @@ Horizontal workspace handles resize the explorer and ticket panels within safe b
 
 The file explorer scrolls independently of the editor. Clicking a folder row or its arrow toggles its children; the repository row toggles the entire file list. Native buttons support Enter and Space. Collapse preserves the selected file and unsaved edits; navigation to another file reveals that file's ancestor folders.
 
+Login and signup support Enter submission, password managers and password visibility toggling. Successful signup signs the user in. Wrong username/password errors do not reveal whether the account exists. Signed-in users can add password access to the same profile from the account menu; account linking never relies on a supplied user ID, matching name or email. Browser drafts stay scoped to the signed-in account.
+
 Drag the divider above the bottom-panel tabs up to enlarge the panel or down to give space back to the editor. The divider also supports Up/Down arrows and Home/End when focused. Its height persists on this device across tabs and reopening; double-click resets the default. Resizing retains editor and terminal minimum space and responds to window size changes.
 
 The Linux tab starts an authenticated isolated workspace only on request. Editor changes sync with conflict checks; terminal changes load without overwriting independent editor edits. Same-file conflicts pause syncing until explicitly resolved. Ctrl shortcuts in the terminal are owned by the shell. Run/Submit execute server-owned regressions in fresh sandboxes for configured challenges; other challenges identify their checks as static. See `docs/linux-workspaces.md` for lifecycle and limits.

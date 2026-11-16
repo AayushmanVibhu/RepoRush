@@ -14,6 +14,7 @@ import {
   FileCode2,
   GitBranch,
   LayoutDashboard,
+  KeyRound,
   LogOut,
   Mail,
   Play,
@@ -83,6 +84,7 @@ function AppSidebar({
   completed: number;
 }) {
   const [accountOpen, setAccountOpen] = useState(false);
+  const {data: accountSession} = useSession();
   const initials =
     name
       .split(" ")
@@ -146,6 +148,7 @@ function AppSidebar({
               <Trophy />
               View progress
             </button>
+            {accountSession?.user?.username ? <span className="account-password-name">Username: {accountSession.user.username}</span> : <a className="password-login-link" href="/signup"><KeyRound/>Add password sign-in</a>}
             <button
               className="sign-out"
               onClick={() => signOut({ callbackUrl: "/login" })}
@@ -394,10 +397,10 @@ function Explorer({
   );
 }
 
-function loadFiles(c: Challenge): FileBuffers {
+function loadFiles(c: Challenge, userId: string): FileBuffers {
   if (typeof window === "undefined") return { ...c.files };
   try {
-    const saved = JSON.parse(localStorage.getItem(`rr-files-${c.id}`) || "{}");
+    const saved = JSON.parse(localStorage.getItem(`rr-files-${userId}-${c.id}`) || "{}");
     return Object.keys(saved).length ? validateFiles(saved) : {...c.files};
   } catch {
     return { ...c.files };
@@ -594,14 +597,16 @@ function IssuePanel({
 
 function Workspace({
   challenge,
+  userId,
   back,
   finish,
 }: {
   challenge: Challenge;
+  userId: string;
   back: () => void;
   finish: (r: TestRow[], m: number) => void;
 }) {
-  const [files, setFiles] = useState<FileBuffers>(() => loadFiles(challenge));
+  const [files, setFiles] = useState<FileBuffers>(() => loadFiles(challenge,userId));
   const [selected, setSelected] = useState(challenge.entryFile);
   const [results, setResults] = useState<TestRow[]>([]);
   const [running, setRunning] = useState(false);
@@ -625,7 +630,7 @@ function Workspace({
       ),
     [challenge, files],
   );
-  const storageKey = `rr-files-${challenge.id}`;
+  const storageKey = `rr-files-${userId}-${challenge.id}`;
   const execute = async (submit = false) => {
     if (running) return;
     setRunning(true);
@@ -819,7 +824,7 @@ function Workspace({
           <div className="editor">
             <Monaco
               key={`${challenge.id}:${selected}`}
-              path={`file:///${challenge.repoName}/${selected}`}
+              path={`file:///${userId}/${challenge.id}/${selected}`}
               height="100%"
               language={languageForPath(selected)}
               value={files[selected] ?? ""}
@@ -1294,7 +1299,7 @@ export default function Page() {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Could not delete your progress. Please retry.');
     setProgress({});
-    try {for (const item of challenges) localStorage.removeItem(`rr-files-${item.id}`);}
+    try {for (const item of challenges) {localStorage.removeItem(`rr-files-${session!.user!.id}-${item.id}`);localStorage.removeItem(`rr-files-${item.id}`);}}
     catch {throw new Error('Database progress was deleted, but browser drafts could not be cleared. Please retry.');}
   };
   useEffect(() => {
@@ -1344,8 +1349,9 @@ export default function Page() {
     />
   ) : screen === "workspace" ? (
     <Workspace
-      key={challenge.id}
+      key={`${session.user.id}:${challenge.id}`}
       challenge={challenge}
+      userId={session.user.id}
       back={() => setScreen("explorer")}
       finish={(rows, ms) => {
         setSubmission({ rows, ms });

@@ -17,7 +17,7 @@ function load(file, dependencies) {
 }
 if (!process.env.E2B_API_KEY) throw new Error('Add E2B_API_KEY to ignored .env.local before running this smoke test.');
 const policy = load('lib/sandbox-policy.ts', {});
-const service = load('lib/linux-sandbox.ts', {e2b: sdk, 'node:crypto':{randomUUID}, './mongodb':{getDatabase() {throw Error('Live smoke does not access MongoDB.');}}, '@/app/challenges':{challenges:[]}, './sandbox-policy':policy});
+const service = load('lib/linux-sandbox.ts', {e2b: sdk, 'node:crypto':{randomUUID}, './mongodb':{getDatabase() {throw Error('Live smoke does not access MongoDB.');}}, '@/app/challenges':{challenges:[]}, './sandbox-policy':policy, './test-results':load('lib/test-results.ts',{})});
 let sandbox;
 let pty;
 try {

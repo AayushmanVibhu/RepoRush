@@ -29,7 +29,7 @@ Closing the panel disconnects the display, not the VM. Start Linux reconnects to
 
 Run output reports the actual command exit status and captured output. Runtime/dependency setup errors are distinct from regression failures and do not award completion. Submit results are computed on the server and saved only after that computation; client-provided PASS rows are ignored. Completion cannot be set via the workspace autosave endpoint.
 
-The original 29 practice challenges still have structural evaluators and their toolbar says Static checks. They have real terminal access, but their browser checks are not represented as executed suites. Full company/upstream suites may require additional services or packages and are not implied by passing a targeted regression.
+All 40 challenges have executable behavioral regressions. The original 29 practice repositories include public Node, unittest or Java cases under `reporush/`; the 11 open-source/interview repositories use their supplied regressions. Results show each case, expected/actual values where reported, source test code and error diagnostics. Syntax/compilation errors are displayed separately. Skipped cases, missing reports and nonzero exits cannot establish completion. Passing a focused regression does not imply passing the full company/upstream assignment or its complete suite.
 
 ## Limits and verification
 
@@ -38,6 +38,8 @@ Workspace upload paths cannot traverse directories. Text is limited to 100 files
 ```powershell
 npm run verify:linux
 npm run smoke:linux
+npm run verify:results
+npm run smoke:results
 npm run typecheck
 npm run build
 ```

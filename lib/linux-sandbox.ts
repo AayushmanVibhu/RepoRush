@@ -1,7 +1,8 @@
 import { Sandbox, CommandExitError } from "e2b";
 import { randomUUID } from "node:crypto";
 import { getDatabase } from "./mongodb";
-import { challenges, type Challenge, type TestRow } from "@/app/challenges";
+import { challenges, type Challenge } from "@/app/challenges";
+import { parseTestResults } from "./test-results";
 import {
   executionPlan,
   SandboxProblem,
@@ -370,14 +371,7 @@ export async function runVerifiedTests(
         onStderr: capture,
       });
       return {
-        results: [
-          {
-            name: "Sandbox regression suite",
-            pass: true,
-            detail:
-              "The server-owned regression command completed with exit code 0.",
-          },
-        ] as TestRow[],
+        results: parseTestResults(output, 0, source),
         output: output.slice(-50000),
         durationMs: Date.now() - started,
       };
@@ -389,13 +383,7 @@ export async function runVerifiedTests(
         );
       if (!output) output = (error.stdout || "") + (error.stderr || "");
       return {
-        results: [
-          {
-            name: "Sandbox regression suite",
-            pass: false,
-            detail: `Regression command exited with code ${error.exitCode}. See Output.`,
-          },
-        ] as TestRow[],
+        results: parseTestResults(output, error.exitCode, source),
         output: output.slice(-50000),
         durationMs: Date.now() - started,
       };

@@ -13,6 +13,8 @@
     "smoke:linux": "node --env-file=.env.local scripts/smoke-linux-live.mjs",
     "verify:coach": "node scripts/verify-coach.mjs",
     "verify:auth": "node scripts/verify-auth.mjs",
+    "verify:results": "node scripts/verify-test-results.mjs",
+    "smoke:results": "node --env-file=.env.local scripts/smoke-test-results-live.mjs",
     "smoke:auth": "node scripts/smoke-auth-live.mjs",
     "verify:progress-reset": "node scripts/verify-progress-reset.mjs",
     "smoke:coach": "node --env-file=.env.local scripts/smoke-coach-live.mjs"

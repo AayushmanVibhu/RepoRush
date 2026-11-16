@@ -58,6 +58,12 @@ export function mergeFiles(
 }
 export type ExecutionPlan = { command: string; prepare?: string };
 export function executionPlan(id: string): ExecutionPlan | undefined {
+  if (["RR-104", "RR-091"].includes(id) || /^RR-JS-00[3-9]$/.test(id))
+    return { command: "node --test --test-reporter=tap reporush/regression.test.mjs" };
+  if (["RR-306", "RR-076"].includes(id) || /^RR-PY-(00[3-9]|010)$/.test(id))
+    return { command: "PYTHONPATH=src python3 -m unittest discover -v -s reporush -p test_regression.py" };
+  if (["RR-203", "RR-218"].includes(id) || /^RR-JAVA-(00[3-9]|010)$/.test(id))
+    return { command: "mkdir -p build && javac -d build src/main/java/dev/reporush/*.java reporush/RegressionTest.java && java -cp build dev.reporush.RegressionTest" };
   if (id === "RR-INT-JAVA-001")
     return {
       command:
@@ -70,21 +76,21 @@ export function executionPlan(id: string): ExecutionPlan | undefined {
     };
   if (/^RR-INT-PY-00[12]$/.test(id))
     return {
-      command: "python3 -m unittest discover -s reporush -p test_regression.py",
+      command: "python3 -m unittest discover -v -s reporush -p test_regression.py",
     };
   if (/^RR-INT-JS-00[12]$/.test(id))
-    return { command: "node --test reporush/regression.test.cjs" };
+    return { command: "node --test --test-reporter=tap reporush/regression.test.cjs" };
   if (["RR-OSS-001", "RR-OSS-002", "RR-OSS-004"].includes(id))
-    return { command: "node --test reporush/regression.test.mjs" };
+    return { command: "node --test --test-reporter=tap reporush/regression.test.mjs" };
   if (id === "RR-OSS-003")
     return {
       prepare:
-        "npm install --ignore-scripts --omit=dev --no-save --no-audit --no-fund dot@1.1.3",
-      command: "node build.js && node --test reporush/regression.test.mjs",
+        "npm install --prefix /home/user/test-tools --ignore-scripts --omit=dev --no-save --no-package-lock --no-audit --no-fund dot@1.1.3",
+      command: "NODE_PATH=/home/user/test-tools/node_modules node build.js && node --test --test-reporter=tap reporush/regression.test.mjs",
     };
   if (id === "RR-OSS-005")
     return {
       prepare: "npm install --ignore-scripts --omit=dev --no-audit --no-fund",
-      command: "node --test reporush/regression.test.mjs",
+      command: "node --test --test-reporter=tap reporush/regression.test.mjs",
     };
 }

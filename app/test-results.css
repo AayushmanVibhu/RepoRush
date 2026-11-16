@@ -1,0 +1,137 @@
+.test-case-list {
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+  text-align: left;
+  min-width: 0;
+}
+.test-case {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 6px;
+  padding: 12px;
+  min-width: 0;
+  overflow: hidden;
+}
+.test-case-heading {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+.test-case-heading > svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+.test-case-heading > div {
+  display: grid;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.test-case-heading small,
+.test-diagnostic > small {
+  font:
+    10px "JetBrains Mono",
+    monospace;
+  color: var(--muted);
+}
+.test-case-heading b {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.test-case-heading em {
+  font:
+    500 10px "JetBrains Mono",
+    monospace;
+  font-style: normal;
+  flex-shrink: 0;
+}
+.test-case > p {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 9px 0 0;
+  overflow-wrap: anywhere;
+}
+.test-case pre,
+.results-body .test-case pre {
+  font:
+    11px/1.65 "JetBrains Mono",
+    monospace;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 8px 0 0;
+  padding: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  max-height: 320px;
+  overflow: auto;
+  text-align: left;
+}
+.test-diagnostic {
+  margin-top: 12px;
+}
+.assertion-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.assertion-values small {
+  color: var(--muted);
+  font:
+    10px "JetBrains Mono",
+    monospace;
+}
+.test-case details {
+  margin-top: 12px;
+  font-size: 11px;
+}
+.test-case summary {
+  cursor: pointer;
+  color: var(--accent);
+  padding: 4px 0;
+}
+.test-case summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.evaluation {
+  overflow: visible;
+}
+.result-page .evaluation > div.test-case-list {
+  height: auto;
+  display: grid;
+  padding: 12px;
+}
+.result-page h1 {
+  font-family: Geist, Arial, sans-serif;
+  font-size: 32px;
+  letter-spacing: -0.04em;
+}
+@media (max-width: 600px) {
+  .assertion-values {
+    grid-template-columns: 1fr;
+  }
+  .test-case-list {
+    padding: 8px;
+  }
+  .test-case {
+    padding: 8px;
+  }
+  .result-page main {
+    padding-top: 32px;
+  }
+  .result-stats > div {
+    padding: 12px 8px;
+  }
+  .result-actions {
+    flex-wrap: wrap;
+  }
+  .test-case-heading {
+    gap: 6px;
+  }
+}

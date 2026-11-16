@@ -104,7 +104,7 @@ function formatBraceLanguage(source: string) {
   return lines.join("\n");
 }
 
-function readableCode(source: string, language: Spec["language"]) {
+export function readableCode(source: string, language: Spec["language"]) {
   return language === "Python"
     ? formatPython(source)
     : formatBraceLanguage(source);

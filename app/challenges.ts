@@ -1,5 +1,13 @@
 export type Difficulty = "Easy" | "Medium" | "Hard";
-export type TestRow = { name: string; pass: boolean; detail: string };
+export type TestRow = {
+  name: string; pass: boolean; detail: string;
+  kind?: "test" | "static" | "error";
+  skipped?: boolean;
+  diagnostic?: string;
+  testCode?: string;
+  expected?: string;
+  actual?: string;
+};
 export type Challenge = {
   id: string; title: string; summary: string; language: "Java" | "Python" | "JavaScript";
   skills: string[]; difficulty: Difficulty; time: string; status: "Completed" | "In progress" | "Not started";
@@ -78,7 +86,14 @@ const coreChallenges: Challenge[] = [
 import { additionalChallenges } from "./challenge-packs";
 import { ossChallenges } from "./oss-challenges";
 import { interviewChallenges } from "./interview-challenges";
-export const challenges: Challenge[] = [...coreChallenges,...additionalChallenges,...ossChallenges,...interviewChallenges];
+import { withPracticeTests } from "./practice-tests";
+export const challenges: Challenge[] = [...coreChallenges,...additionalChallenges,...ossChallenges,...interviewChallenges].map(withPracticeTests);
+
+// Keep persisted IDs stable; people see the catalog's sequential problem number.
+export function challengeLabel(id: string) {
+  const index = challenges.findIndex(challenge => challenge.id === id);
+  return index < 0 ? "Challenge" : `Challenge ${index + 1}`;
+}
 
 const catalogErrors:string[]=[];
 const ids=new Set<string>();

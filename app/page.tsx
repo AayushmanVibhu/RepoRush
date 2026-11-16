@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import {
   challenges,
+  challengeLabel,
   languageForPath,
   type Challenge,
   type Difficulty,
@@ -42,6 +43,7 @@ import { LinuxTerminal, linuxRequest } from "./linux-terminal";
 import { AICoach } from "./ai-coach";
 import { ResizableResults } from "./resizable-results";
 import { FileTree } from "./file-tree";
+import { TestCaseResults } from "./test-case-results";
 import { executionPlan, validateFiles } from "@/lib/sandbox-policy";
 
 const Monaco = dynamic(() => import("@monaco-editor/react"), { ssr: false });
@@ -348,7 +350,7 @@ function Explorer({
                     <span className="challenge-name">
                       <b>{c.title}</b>
                       <small>
-                        {c.id} · {c.summary}
+                        {challengeLabel(c.id)} · {c.summary}
                       </small>
                     </span>
                     <span className="language">
@@ -401,10 +403,16 @@ function loadFiles(c: Challenge, userId: string): FileBuffers {
   if (typeof window === "undefined") return { ...c.files };
   try {
     const saved = JSON.parse(localStorage.getItem(`rr-files-${userId}-${c.id}`) || "{}");
-    return Object.keys(saved).length ? validateFiles(saved) : {...c.files};
+    return Object.keys(saved).length ? withPublicTests(c, validateFiles(saved)) : {...c.files};
   } catch {
     return { ...c.files };
   }
+}
+
+function withPublicTests(challenge: Challenge, files: FileBuffers): FileBuffers {
+  // Add newly introduced test files to existing workspaces without restoring deleted source.
+  const added = Object.fromEntries(Object.entries(challenge.files).filter(([path]) => path.startsWith("reporush/") && !(path in files)));
+  return {...added, ...files};
 }
 
 function ResultsPanel({
@@ -475,18 +483,7 @@ function ResultsPanel({
             </span>
           </div>
         ) : tab === "tests" ? (
-          <div className="tests">
-            {results.map((r) => (
-              <div key={r.name} className={r.pass ? "pass" : "fail"}>
-                {r.pass ? <Check /> : <XCircle />}
-                <span>
-                  <b>{r.name}</b>
-                  <small>{r.detail}</small>
-                </span>
-                <em>{r.pass ? "PASS" : "FAIL"}</em>
-              </div>
-            ))}
-          </div>
+          <TestCaseResults rows={results} />
         ) : (
           <pre>
             {output || results
@@ -536,7 +533,7 @@ function IssuePanel({
       </div>
       <div className="issue-body">
         <div className="issue-meta">
-          <span>{challenge.id}</span>
+          <span>{challengeLabel(challenge.id)}</span>
           <DifficultyBadge value={challenge.difficulty} />
         </div>
         <h1>{challenge.title}</h1>
@@ -654,14 +651,14 @@ function Workspace({
       } else if (executionPlan(challenge.id)) {
         data = await linuxRequest("run", challenge.id, {files});
       } else {
-        data = {results: challenge.evaluate(files), durationMs: Math.round(performance.now() - start), output: "Static source checks only. This challenge does not yet have a configured sandbox regression suite. You can still run its tools in the Linux terminal."};
+        data = {results: challenge.evaluate(files).map(row => ({...row, kind: "static"})), durationMs: Math.round(performance.now() - start), output: "Static source checks only. This challenge does not yet have a configured sandbox regression suite. You can still run its tools in the Linux terminal."};
       }
       setResults(data.results);
       setOutput(data.output);
       if (submit) finish(data.results, data.durationMs);
     } catch (error) {
       const message = (error as Error).message;
-      setResults([{name: "Execution unavailable", pass: false, detail: message}]);
+      setResults([{name: "Execution unavailable", pass: false, kind: "error", detail: message}]);
       setOutput(message);
     } finally {setRunning(false);}
   };
@@ -675,7 +672,7 @@ function Workspace({
         setSaveState(data.progress?.files ? "saved" : "local");
         if (!data.progress?.files) return;
         const saved = data.progress.files as FileBuffers;
-        setFiles(validateFiles(saved));
+        setFiles(withPublicTests(challenge, validateFiles(saved)));
       })
       .catch(() => setSaveState("local"))
       .finally(() => {
@@ -756,7 +753,7 @@ function Workspace({
         <div className="breadcrumbs">
           <span>Challenges</span>
           <ChevronRight />
-          <b>{challenge.id}</b>
+          <b>{challengeLabel(challenge.id)}</b>
           <i />
           <strong>{challenge.title}</strong>
           <small className={`save-state ${saveState}`}>
@@ -1180,29 +1177,31 @@ function Result({
   home: () => void;
 }) {
   const passed = rows.filter((r) => r.pass).length;
-  const accepted = passed === rows.length;
+  const accepted = rows.length > 0 && passed === rows.length;
+  const staticOnly = rows.length > 0 && rows.every(row => row.kind === "static");
+  const hasError = rows.some(row => row.kind === "error");
   return (
     <div className="result-page">
       <header>
         <div className="brand">
           <Mark />
         </div>
-        <span>Submission · {challenge.id}</span>
+        <span>Submission · {challengeLabel(challenge.id)}</span>
       </header>
       <main>
         <div className={`result-icon ${accepted ? "accepted" : "rejected"}`}>
           {accepted ? <Check /> : <X />}
         </div>
-        <p className="eyebrow">Submission evaluated</p>
-        <h1>PATCH {accepted ? "ACCEPTED" : "REJECTED"}</h1>
+        <p className="eyebrow">{challenge.title}</p>
+        <h1>{accepted ? "Congratulations, challenge solved!" : hasError ? "Let’s fix that error" : "Keep going, you’re getting closer"}</h1>
         <p>
           {accepted
-            ? "Clean fix. Your patch satisfies the repository contract and evaluation suite."
-            : "Your patch still has a failing behavior. Your edits are safe—return to the workspace and keep debugging."}
+            ? staticOnly ? "Nice work! You passed all source checks for this challenge. Runtime tests are not available for this repository yet." : `Great work! Your solution passed all ${rows.length} test cases. Your progress has been saved.`
+            : hasError ? "Your code could not complete the test run. Check the error below, then return to your code and try again." : "Some test cases still need attention. Review the results below, update your code, and try again. Your edits are saved."}
         </p>
         <div className="result-stats">
           <div>
-            <small>Tests passed</small>
+            <small>{staticOnly ? "Source checks passed" : "Tests passed"}</small>
             <b>
               {passed}
               <span> / {rows.length}</span>
@@ -1224,27 +1223,14 @@ function Result({
         </div>
         <section className="evaluation">
           <header>
-            <h2>Evaluation summary</h2>
+            <h2>{staticOnly ? "Source checks" : "Test results"}</h2>
             <span>
               {accepted
                 ? "All checks passed"
                 : `${rows.length - passed} failing`}
             </span>
           </header>
-          {rows.map((r) => (
-            <div key={r.name}>
-              {r.pass ? (
-                <Check className="green" />
-              ) : (
-                <XCircle className="red" />
-              )}
-              <span>
-                <b>{r.name}</b>
-                <small>{r.detail}</small>
-              </span>
-              <em>{r.pass ? "Passed" : "Failed"}</em>
-            </div>
-          ))}
+          <TestCaseResults rows={rows} />
         </section>
         {accepted && (
           <div className="skills-practiced">

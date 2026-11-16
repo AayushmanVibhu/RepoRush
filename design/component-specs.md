@@ -12,8 +12,8 @@
 - `FileExplorer`: nested path-driven folders, extension icons, selected-file edge, and per-file unsaved dots. Its file list scrolls independently below the Explorer heading, including horizontal scrolling for long paths. Folder and repository disclosure buttons show their expanded state and hide or reveal descendants without changing editor buffers. It renders the active challenge's repository rather than a global file list.
 - `EditorTabs`: active file and dirty state. Each repository file has an independent editable Monaco model identified by its file path.
 - `IssuePanel`: issue metadata followed by description, expected behavior, reproduction, and constraints.
-- `TestResultsPanel`: idle, running, pass, and fail states; diagnostics use actual local evaluation results.
-- `SubmissionResult`: accepted and rejected variants share one data-driven component.
+- `TestResultsPanel`: individual numbered cases show pass/fail status, public test code, assertion differences and program errors from actual runtime output. Skipped or unreported cases never establish a passing solution.
+- `SubmissionResult`: a successful solve congratulates the learner and confirms completion. Failed attempts show actionable test feedback and retain edits. Both views share the test-case component.
 
 Reuse these patterns before adding new surface, badge, toolbar, or status variants.
 

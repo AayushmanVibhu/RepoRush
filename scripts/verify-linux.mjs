@@ -27,6 +27,7 @@ function load(file, dependencies, extra = {}) {
   return exports;
 }
 const policy = load("lib/sandbox-policy.ts", {});
+const reports = load("lib/test-results.ts", {});
 for (const path of [
   "../secret",
   "/etc/passwd",
@@ -50,7 +51,7 @@ assert.equal(
   policy.validateFiles({ "src/code.py": "print(1)" })["src/code.py"],
   "print(1)",
 );
-assert.equal(policy.executionPlan("RR-104"), undefined);
+assert.ok(policy.executionPlan("RR-104").command.includes("node --test"));
 assert.equal(
   policy.executionPlan("RR-INT-JAVA-001").command.includes("javac"),
   true,
@@ -120,9 +121,10 @@ const fakeSandbox = {
     },
   },
   commands: {
-    async run(command) {
+    async run(command, options) {
       if (command.startsWith("node --test") && failTests)
         throw new CommandExitError();
+      options?.onStdout?.("TAP version 13\nok 1 - produces the expected result\n1..1\n");
       return { stdout: "test output", stderr: "", exitCode: 0 };
     },
   },
@@ -153,6 +155,7 @@ const sandbox = load("lib/linux-sandbox.ts", {
   },
   "@/app/challenges": { challenges: [] },
   "./sandbox-policy": policy,
+  "./test-results": reports,
 });
 await assert.rejects(
   sandbox.ownedSandbox("attacker", "RR-INT-JS-002"),

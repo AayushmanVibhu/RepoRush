@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     grading = executionPlan(challenge.id)
       ? await runVerifiedTests(session.user.id, challenge, submittedFiles)
       : {
-          results: challenge.evaluate(submittedFiles),
+          results: challenge.evaluate(submittedFiles).map(row => ({...row, kind: "static" as const})),
           durationMs: 0,
           output: "Static checks only for this challenge.",
         };

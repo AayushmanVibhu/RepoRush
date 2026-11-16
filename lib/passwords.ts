@@ -14,7 +14,7 @@ export function validNewPassword(value: unknown): value is string {
     typeof value === "string" &&
     value.length <= 256 &&
     value.trim().length > 0 &&
-    Array.from(value).length >= 15 &&
+    Array.from(value).length >= 8 &&
     Array.from(value).length <= 128
   );
 }
@@ -27,7 +27,7 @@ function derive(password: string, salt: Buffer): Promise<Buffer> {
 }
 export async function hashPassword(password: string): Promise<string> {
   if (!validNewPassword(password))
-    throw Error("Password must contain 15 to 128 characters.");
+    throw Error("Password must contain 8 to 128 characters.");
   const salt = randomBytes(16);
   const key = await derive(password, salt);
   return `scrypt$v1$131072$8$1$${salt.toString("hex")}$${key.toString("hex")}`;

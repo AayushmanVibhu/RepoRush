@@ -205,7 +205,7 @@ export function LoginPanel({
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 required
-                minLength={signingUp ? 15 : undefined}
+                minLength={signingUp ? 8 : undefined}
                 maxLength={128}
                 aria-describedby={signingUp ? "password-help" : undefined}
                 disabled={Boolean(busy)}
@@ -223,7 +223,7 @@ export function LoginPanel({
             </div>
             {signingUp && (
               <small id="password-help">
-                Use at least 15 characters. A memorable passphrase works well.
+                Use at least 8 characters. A memorable passphrase works well.
               </small>
             )}
             {signingUp && (
@@ -237,7 +237,7 @@ export function LoginPanel({
                   value={confirmation}
                   onChange={(event) => setConfirmation(event.target.value)}
                   required
-                  minLength={15}
+                  minLength={8}
                   maxLength={128}
                   disabled={Boolean(busy)}
                 />

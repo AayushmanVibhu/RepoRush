@@ -46,6 +46,10 @@ for (const input of [
   assert.equal(passwords.normalizeUsername(input), null);
 assert.equal(passwords.validNewPassword(" ".repeat(20)), false);
 assert.equal(passwords.validNewPassword("short"), false);
+assert.equal(passwords.validNewPassword("x".repeat(7)), false);
+assert.equal(passwords.validNewPassword("x".repeat(8)), true);
+const minimumHash = await passwords.hashPassword("x".repeat(8));
+assert.equal(await passwords.verifyPassword("x".repeat(8), minimumHash), true);
 assert.equal(passwords.validNewPassword("x".repeat(129)), false);
 const phrase = "fixture-passphrase-with-spaces  ";
 const first = await passwords.hashPassword(phrase),

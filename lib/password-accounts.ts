@@ -123,7 +123,7 @@ export async function registerPasswordAccount(
       400,
     );
   if (!validNewPassword(input.password))
-    throw new AccountError("Use a password with 15 to 128 characters.", 400);
+    throw new AccountError("Use a password with 8 to 128 characters.", 400);
   if (input.password !== input.confirmPassword)
     throw new AccountError("The passwords do not match.", 400);
   await accountPermit(request, "signup", usernameKey);

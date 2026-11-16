@@ -35,7 +35,7 @@ export function TestCaseResults({ rows }: { rows: TestRow[] }) {
                     : "Failed"}
             </em>
           </div>
-          <p>{row.detail}</p>
+          {row.detail !== "Passed" && <p>{row.detail}</p>}
           {(row.expected !== undefined || row.actual !== undefined) && (
             <div className="assertion-values">
               {row.expected !== undefined && (

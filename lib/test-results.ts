@@ -96,8 +96,8 @@ export function parseTestResults(
         ? "This test was not executed."
         : match[1] === "ok"
           ? "Passed"
-          : error || "The result did not match the expected behavior.",
-      diagnostic: diagnostic?.trim(),
+          : error && !/^[|>][-+]?$/.test(error) ? error : "The result did not match the expected behavior.",
+      diagnostic: match[1] === "not ok" ? diagnostic?.trim() : undefined,
       ...assertionValues(diagnostic),
       testCode: publicTestCase(files, name),
     });

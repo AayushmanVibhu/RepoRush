@@ -24,7 +24,9 @@ const rows = parseTestResults(actual.stdout + actual.stderr, actual.status, {
 });
 assert.equal(rows.length, 2);
 assert.equal(rows[0].pass, true);
+assert.equal(rows[0].diagnostic, undefined);
 assert.equal(rows[1].pass, false);
+assert.notEqual(rows[1].detail,"|-");
 assert.match(rows[1].diagnostic, /expected: 4/);
 assert.match(rows[1].diagnostic, /actual: 3/);
 assert.equal(rows[1].expected, "4");

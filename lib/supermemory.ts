@@ -2,7 +2,8 @@ import { Supermemory } from "supermemory";
 import { randomUUID } from "node:crypto";
 import { getDatabase } from "./mongodb";
 import { namespaceFor, redact, type RecalledMemory } from "./coach-policy";
-import { challenges } from "@/app/challenges";
+import { getChallengeDetails } from "./challenge-catalog";
+import { SandboxProblem } from "./sandbox-policy";
 
 export type LearningEvent = {
   challengeId: string;
@@ -286,9 +287,10 @@ export async function rememberLearningEvent(
   userId: string,
   event: LearningEvent,
 ) {
-  const challenge = challenges.find(
-    (challenge) => challenge.id === event.challengeId,
-  );
+  const challenge = await getChallengeDetails(event.challengeId).catch((error) => {
+    if (error instanceof SandboxProblem && (error.status === 400 || error.status === 404)) return null;
+    throw error;
+  });
   if (!challenge) return { status: "ignored" };
   const action = {
     challenge_started: "Opened",

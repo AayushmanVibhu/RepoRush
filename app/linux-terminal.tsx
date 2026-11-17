@@ -1,4 +1,5 @@
 "use client";
+import type { ChallengeRevision } from "@/lib/challenge-model";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Terminal } from "@xterm/xterm";
 import { mergeFiles, type WorkspaceFiles } from "@/lib/sandbox-policy";
@@ -25,11 +26,13 @@ function equalFiles(a: WorkspaceFiles, b: WorkspaceFiles) {
 }
 export function LinuxTerminal({
   challengeId,
+  revision,
   files,
   onFilesChange,
   visible,
 }: {
   challengeId: string;
+  revision?: ChallengeRevision;
   files: WorkspaceFiles;
   onFilesChange: (files: WorkspaceFiles) => void;
   visible: boolean;
@@ -251,6 +254,7 @@ export function LinuxTerminal({
     try {
       const captured = { ...current.current };
       const data = await linuxRequest("start", challengeId, {
+        revision,
         files: captured,
       });
       base.current = captured;

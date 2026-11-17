@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getChallenge } from "@/lib/linux-sandbox";
-import { validateFiles } from "@/lib/sandbox-policy";
+import { challengeError, getChallengeDetails, resolveWorkspace } from "@/lib/challenge-catalog";
+import { SandboxProblem, validateFiles } from "@/lib/sandbox-policy";
 import {
   COACH_MODES,
   CoachError,
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       { status: 401 },
     );
   try {
-    const challenge = getChallenge(
+    const challenge = await getChallengeDetails(
       request.nextUrl.searchParams.get("challengeId"),
     );
     const userId = session.user.id;
@@ -49,7 +49,8 @@ export async function GET(request: NextRequest) {
       },
       { headers: { "Cache-Control": "no-store" } },
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof SandboxProblem) return challengeError(error);
     return NextResponse.json(
       { error: "Could not load coaching history." },
       { status: 400 },
@@ -68,10 +69,11 @@ export async function DELETE(request: NextRequest) {
   try {
     await clearConversation(
       session.user.id,
-      getChallenge(request.nextUrl.searchParams.get("challengeId")).id,
+      (await getChallengeDetails(request.nextUrl.searchParams.get("challengeId"))).id,
     );
     return NextResponse.json({ cleared: true });
-  } catch {
+  } catch (error) {
+    if (error instanceof SandboxProblem) return challengeError(error);
     return NextResponse.json(
       { error: "Could not clear this conversation." },
       { status: 400 },
@@ -101,7 +103,7 @@ export async function POST(request: NextRequest) {
     if (raw.length > 250000)
       throw new CoachError("Coaching context is too large.", 413);
     const body = JSON.parse(raw);
-    const challenge = getChallenge(body.challengeId);
+    const { details: challenge } = await resolveWorkspace(body.challengeId, session.user.id, body.revision);
     if (
       !COACH_MODES.includes(body.mode) ||
       typeof body.question !== "string" ||
@@ -207,6 +209,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (release) await release();
+    if (error instanceof SandboxProblem) return challengeError(error);
     return NextResponse.json(
       {
         error:

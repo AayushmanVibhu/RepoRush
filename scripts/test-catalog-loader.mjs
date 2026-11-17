@@ -6,9 +6,13 @@ const require = createRequire(import.meta.url);
 const ts = require("typescript");
 const root = resolve(import.meta.dirname, "..");
 const cache = new Map();
+export function mockTypeScript(relative, exports) {
+  cache.set(resolve(root, relative), exports);
+}
 export function loadTypeScript(relative) {
   const path = resolve(root, relative);
   if (cache.has(path)) return cache.get(path);
+  const requireFromFile = createRequire(path);
   const exports = {};
   cache.set(path, exports);
   vm.runInNewContext(
@@ -22,14 +26,31 @@ export function loadTypeScript(relative) {
     {
       exports,
       console,
+      process,
+      Buffer,
+      Date,
+      AbortSignal,
+      Response,
+      TextEncoder,
+      URL,
+      URLSearchParams,
+      get indexedDB() { return globalThis.indexedDB; },
+      get localStorage() { return globalThis.localStorage; },
+      get crypto() { return globalThis.crypto; },
+      get fetch() { return globalThis.fetch; },
       require(name) {
+        if (
+          !name.startsWith("@/") &&
+          !name.startsWith("./") &&
+          !name.startsWith("../")
+        ) {
+          return requireFromFile(name);
+        }
         const target = name.startsWith("@/")
           ? resolve(root, name.slice(2))
           : resolve(dirname(path), name);
-        if (name.endsWith(".json"))
-          return JSON.parse(readFileSync(target, "utf8"));
         if (existsSync(`${target}.ts`)) return loadTypeScript(`${target}.ts`);
-        return require(name);
+        return requireFromFile(target);
       },
     },
   );

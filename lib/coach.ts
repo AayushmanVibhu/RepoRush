@@ -12,7 +12,7 @@ import {
   type RecalledMemory,
 } from "./coach-policy";
 import { flushMemories, recallLearning, queueMemory } from "./supermemory";
-import type { Challenge } from "@/app/challenges";
+import type { ChallengeDetails } from "./challenge-model";
 
 export type CoachMessage = {
   role: "user" | "assistant";
@@ -111,7 +111,7 @@ export async function coachPermit(userId: string) {
 }
 export async function prepareCoach(
   userId: string,
-  challenge: Challenge,
+  challenge: ChallengeDetails,
   input: {
     mode: CoachMode;
     question: string;

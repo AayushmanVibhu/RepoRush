@@ -130,6 +130,7 @@ const fakeSandbox = {
   },
 };
 const sandbox = load("lib/linux-sandbox.ts", {
+  "./challenge-model": load("lib/challenge-model.ts", { "./sandbox-policy": policy }),
   e2b: {
     CommandExitError,
     Sandbox: {

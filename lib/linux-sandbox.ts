@@ -1,12 +1,13 @@
 import { Sandbox, CommandExitError } from "e2b";
 import { randomUUID } from "node:crypto";
 import { getDatabase } from "./mongodb";
-import { challenges, type Challenge } from "@/app/challenges";
+import { sameRevision, type ChallengeRevision, type WorkspaceChallenge } from "./challenge-model";
 import { parseTestResults } from "./test-results";
 import {
   executionPlan,
   SandboxProblem,
   validateFiles,
+  type ExecutionPlan,
   type WorkspaceFiles,
 } from "./sandbox-policy";
 
@@ -16,6 +17,7 @@ const MAX_MS = 30 * 60 * 1000;
 type LinuxSession = {
   _id: string;
   challengeId?: string;
+  challengeRevision?: ChallengeRevision | null;
   sandboxId?: string;
   pid?: number;
   startedAt?: Date;
@@ -29,11 +31,6 @@ async function sessions() {
 }
 export function sandboxConfigured() {
   return Boolean(process.env.E2B_API_KEY);
-}
-export function getChallenge(id: unknown) {
-  const challenge = challenges.find((challenge) => challenge.id === id);
-  if (!challenge) throw new SandboxProblem("Unknown challenge.", 404);
-  return challenge;
 }
 function options() {
   if (!sandboxConfigured())
@@ -156,7 +153,7 @@ async function consumeQuota(userId: string) {
 }
 export async function ensureRuntime(
   sandbox: Sandbox,
-  language: Challenge["language"],
+  language: WorkspaceChallenge["language"],
 ) {
   // Runs only in E2B, never on the application host. A custom template avoids cold installs.
   const probe =
@@ -188,7 +185,7 @@ export async function seedFiles(sandbox: Sandbox, files: WorkspaceFiles) {
 }
 export async function startSession(
   userId: string,
-  challenge: Challenge,
+  challenge: Pick<WorkspaceChallenge, "id" | "language" | "revision">,
   files: WorkspaceFiles,
 ) {
   options();
@@ -196,7 +193,10 @@ export async function startSession(
     const collection = await sessions();
     const old = await collection.findOne({ _id: userId });
     if (old?.sandboxId && old.expiresAt && old.expiresAt > new Date()) {
-      if (old.challengeId === challenge.id) {
+      const sameWorkspace = challenge.revision && old.challengeRevision
+        ? sameRevision(challenge.revision, old.challengeRevision)
+        : !challenge.revision && !old.challengeRevision;
+      if (old.challengeId === challenge.id && sameWorkspace) {
         try {
           const existing = await Sandbox.connect(old.sandboxId, {
             ...options(),
@@ -241,6 +241,7 @@ export async function startSession(
         {
           $set: {
             challengeId: challenge.id,
+            challengeRevision: challenge.revision ?? null,
             sandboxId: sandbox.sandboxId,
             pid: pty.pid,
             startedAt: new Date(),
@@ -315,11 +316,11 @@ function shellQuote(value: string) {
 }
 export async function runVerifiedTests(
   userId: string,
-  challenge: Challenge,
+  challenge: Pick<WorkspaceChallenge, "id" | "language" | "entryFile" | "files">,
   files: WorkspaceFiles,
+  plan: ExecutionPlan | undefined = executionPlan(challenge.id),
 ) {
   options();
-  const plan = executionPlan(challenge.id);
   if (!plan)
     throw new SandboxProblem(
       "This challenge has static checks only. Use the Linux terminal to run its tools manually.",
@@ -328,7 +329,8 @@ export async function runVerifiedTests(
   return withUserLease(userId, async () => {
     // Fresh VM for every run. Terminal state, edited tests, config and installed hooks are never trusted.
     const source = { ...challenge.files };
-    const editable = (path: string) => /\.(js|py|java|jst)$/.test(path) && !/(^|\/)(tests?|spec|reporush)(\/|\.)|test\.|\.test\.|build\.js$/i.test(path);
+    const protectedPath = (path: string) => /(^|\/)(tests?|spec|reporush)(\/|\.)|test\.|\.test\.|build\.js$/i.test(path);
+    const editable = (path: string) => /\.(js|py|java|jst)$/.test(path) && !protectedPath(path);
     for (const path of Object.keys(source)) {
       if (editable(path) && !(path in files)) delete source[path];
     }
@@ -339,7 +341,7 @@ export async function runVerifiedTests(
       )
         source[path] = files[path];
     }
-    if (challenge.entryFile in files)
+    if (Object.hasOwn(files, challenge.entryFile) && !protectedPath(challenge.entryFile))
       source[challenge.entryFile] = files[challenge.entryFile];
     await consumeQuota(userId);
     const sandbox = await createSandbox(110000);

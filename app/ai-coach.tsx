@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
-import type { Challenge } from "./challenges";
+import type { WorkspaceChallenge } from "@/lib/challenge-model";
 type FileBuffers = Record<string, string>;
 import type { CoachMessage } from "@/lib/coach";
 import type { CoachMode, CoachPatch, RecalledMemory } from "@/lib/coach-policy";
@@ -25,7 +25,7 @@ export function AICoach({
   output,
   onFilesChange,
 }: {
-  challenge: Challenge;
+  challenge: WorkspaceChallenge;
   files: FileBuffers;
   selected: string;
   selection: string;
@@ -140,6 +140,7 @@ export function AICoach({
       const response = await fetch("/api/coach", {
         ...json({
           challengeId: challenge.id,
+          revision: challenge.revision,
           mode,
           question,
           selected,

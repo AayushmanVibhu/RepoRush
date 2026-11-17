@@ -18,7 +18,9 @@ const require = createRequire(import.meta.url);
 const snapshots = JSON.parse(
   readFileSync(join(root, "app/interview-data/challenges.json"), "utf8"),
 );
-const work = mkdtempSync(join(root, ".oss-work/interview-verify-"));
+const workRoot = join(root, ".oss-work");
+mkdirSync(workRoot, { recursive: true });
+const work = mkdtempSync(join(workRoot, "interview-verify-"));
 const ts = require("typescript");
 const catalog = {};
 vm.runInNewContext(

@@ -36,7 +36,7 @@ assert.ok(!policy.namespaceFor("alice").includes("alice"));
 for (const secret of [
   'password="example-secret"',
   `AIza${"a".repeat(35)}`,
-  "mongodb+srv://user:password@server/db",
+  "mongodb+srv://" + "fixture-user:fixture-password@" + "catalog.invalid",
   "Bearer abcdefghijklmnop",
 ])
   assert.ok(policy.redact(secret).includes("REDACTED"));
@@ -148,7 +148,8 @@ const dependencies = {
   "node:crypto": crypto,
   "./mongodb": { getDatabase: async () => db },
   "./coach-policy": policy,
-  "@/app/challenges": { challenges: [] },
+  "./challenge-catalog": { getChallengeDetails: async () => null },
+  "./sandbox-policy": { SandboxProblem: class SandboxProblem extends Error {} },
 };
 const memory = load("lib/supermemory.ts", dependencies, {
   SUPERMEMORY_API_KEY: "test",

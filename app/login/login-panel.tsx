@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BrandLogo } from "../brand-logo";
 import { signIn } from "next-auth/react";
-import { challenges } from "../challenges";
 
 export function LoginPanel({
   mode = "login",
@@ -134,7 +133,7 @@ export function LoginPanel({
           <ul>
             <li>
               <Check />
-              {challenges.length} curated repository challenges
+              Curated repository challenges
             </li>
             <li>
               <Check />

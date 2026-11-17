@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import type { CommandHandle } from "e2b";
 import { auth } from "@/lib/auth";
-import { getChallenge, ownedSandbox } from "@/lib/linux-sandbox";
+import { ownedSandbox } from "@/lib/linux-sandbox";
+import { isChallengeId } from "@/lib/challenge-model";
 import { SandboxProblem } from "@/lib/sandbox-policy";
 
 export const runtime = "nodejs";
@@ -16,7 +17,7 @@ export async function GET(
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const { challengeId } = await params;
-    getChallenge(challengeId);
+    if (!isChallengeId(challengeId)) throw new SandboxProblem("Invalid challenge ID.");
     const { sandbox, row } = await ownedSandbox(session.user.id, challengeId);
     let handle: CommandHandle | undefined;
     let close = () => {};

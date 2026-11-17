@@ -26,9 +26,52 @@
 
 @media(max-width:980px){.track-grid{grid-template-columns:1fr}.progress-layout{grid-template-columns:1fr}.track-skills{min-height:0}}@media(max-width:800px){.account-menu{position:fixed;left:66px;right:auto;bottom:14px;width:220px}.metric-grid{grid-template-columns:1fr}.insight-page{padding-left:82px}.catalog-head{align-items:flex-start;gap:18px}.continue-button{flex:0 0 auto}}
 
+.filters {
+  flex-wrap: wrap;
+}
+.filters .search {
+  min-width: min(100%, 160px);
+}
+.filters label {
+  max-width: 100%;
+}
+.filters label:has(:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.filters select {
+  min-width: 0;
+}
+.filter-button:hover {
+  background: var(--elevated);
+  color: var(--text);
+}
+
 /* Warm product ink and green authentication action */
 /* Icon-only brand mark from the supplied R artwork. */
 /* Linux workspace terminal, sharing the existing bottom-panel surface. */
 .results-panel.terminal-open{height:340px;flex-basis:340px}.linux-frame{height:100%}.linux-frame[hidden]{display:none}.linux-panel{height:100%;display:flex;flex-direction:column;min-height:0;background:var(--bg)}.linux-toolbar{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border-soft);flex-wrap:wrap}.linux-toolbar>span{flex:1;font:10px 'JetBrains Mono';color:var(--muted)}.linux-toolbar button,.linux-conflict button{border:1px solid var(--border);border-radius:var(--r-sm);background:var(--elevated);color:var(--text);padding:5px 9px;cursor:pointer;font-size:11px}.linux-toolbar button:disabled,.linux-conflict button:disabled{opacity:.5;cursor:default}.linux-notice{font-size:11px;line-height:1.5;color:var(--muted);margin:8px 12px}.linux-notice[role=alert]{color:var(--warning)}.linux-terminal-host{flex:1;min-height:0;margin:6px 8px;overflow:hidden}.linux-terminal-host .xterm{height:100%}.linux-conflict{display:flex;gap:8px;padding:0 12px 8px}.linux-panel:has(.linux-conflict) .linux-terminal-host{min-height:80px}.results-body:has(.linux-panel){position:relative}@media(max-width:800px){.results-panel.terminal-open{height:300px;flex-basis:300px}.linux-toolbar{gap:4px}.linux-toolbar>span{flex-basis:100%}}
 .mark{width:36px;height:32px;background:transparent;border-radius:0;flex:none}.compact-brand .mark{width:32px;height:28px}.brand-logo{display:block;width:100%;height:100%;object-fit:contain}.login-brand .mark{width:44px;height:40px}.login-icon{width:52px;height:48px;background:transparent;border-radius:0}
 .language,.time{color:#c8bda8}.issue-intro,.issue section p,.issue li{color:#b6b0a4}.idle-state p,.results-body pre,.skills-practiced i{color:#c5bba8}.login-copy li svg{color:var(--success)}.login-copy li:last-child svg{color:#9aaee7}.login-card>button{border-color:#75be94;background:#63aa7d;color:#09150f;box-shadow:0 8px 24px rgba(95,173,131,.12)}.login-card>button:hover{background:#70b78a}.login-icon{color:#8fc6a6}
+
+.workspace:has(.workspace-recovery) {
+  display: flex;
+  flex-direction: column;
+}
+.workspace:has(.workspace-recovery) .work-main {
+  flex: 1;
+  min-height: 0;
+}
+.workspace-recovery {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+.workspace-recovery p {
+  margin: 0;
+  color: var(--warning);
+}

@@ -1,39 +1,42 @@
 # RepoRush
 
-A production-minded debugging practice interface built with Next.js, TypeScript, Monaco Editor, MongoDB, Auth.js, Supermemory, and Lucide.
-https://youtu.be/F_L8Opdw8kQ
+RepoRush is a debugging practice app for JavaScript, Python, and Java. Learners investigate issue tickets, edit repositories in Monaco, and submit fixes that run against server-controlled regressions.
 
-## Architecture
-
-- Next.js App Router hosted on Vercel
-- GitHub OAuth and username/password sign-in through Auth.js
-- MongoDB Atlas for users, workspaces, progress, and submissions
-- Supermemory v5 for user-isolated learning events
-- Monaco Editor for repository workspaces
-
-GitHub Pages is not used because authenticated API routes require a server runtime.
+Next.js and React provide the UI and API. Auth.js handles sign-in. MongoDB stores accounts, progress, workspaces, submissions, and published challenge metadata. A challenge's immutable files live on disk or in Cloudflare R2. The browser loads the catalog first and downloads a repository when a learner opens it. In database mode, IndexedDB reuses verified snapshots by version and hash. E2B runs tests and Linux workspaces, Gemini powers coaching, and Supermemory provides learning recall.
 
 ## Local development
 
-```bash
-npm install
-npm run typecheck
+Use Node.js 22.19 or newer. Copy `.env.example` to `.env.local`, then set `MONGODB_URI` for a development MongoDB replica set or Atlas database, `AUTH_SECRET`, and `AUTH_URL` (usually `http://localhost:3000`). Set `MONGODB_DB` if your development database uses a different name.
+
+```sh
+npm ci
 npm run dev
 ```
 
-Create an ignored `.env.local` with `MONGODB_URI`, `AUTH_SECRET`, `AUTH_URL`,
-`GITHUB_ID`, and `GITHUB_SECRET`. Configure `SUPERMEMORY_API_KEY`, `GEMINI_API_KEY`
-and `E2B_API_KEY` for learning memory, coaching and Linux. Challenge edits are saved
-to MongoDB after login and retained in user-scoped browser storage as an offline fallback.
-See [authentication setup](docs/authentication.md) for signup, password sign-in and linking an existing GitHub profile.
+Open [localhost:3000](http://localhost:3000) and use username/password sign-up, or configure `GITHUB_ID` and `GITHUB_SECRET` for [GitHub sign-in](docs/authentication.md). Set `E2B_API_KEY` for grading and Linux, `GEMINI_API_KEY` for coaching, and `SUPERMEMORY_API_KEY` for learning recall. The R2 provider uses the four `R2_*` settings in the template.
 
-## Vercel deployment
+| Catalog source | Snapshot provider | Use |
+| --- | --- | --- |
+| `legacy` | `local` | Default. Serve the bundled catalog. |
+| `legacy` | `r2` | Serve the bundled catalog independently of R2. |
+| `database` | `local` | Read published metadata from MongoDB and snapshots from a private local directory. |
+| `database` | `r2` | Read published metadata from MongoDB and snapshots from a private R2 bucket. |
 
-1. Import `AayushmanVibhu/RepoRush` into Vercel.
-2. Add the server environment variables listed above to the Vercel project.
-3. Set `AUTH_URL` to the production Vercel URL.
-4. Configure the GitHub OAuth callback as
-   `https://YOUR_DOMAIN/api/auth/callback/github`.
-5. Deploy, then verify login, saving, refresh recovery, and submission history.
+Set the modes with `CHALLENGE_CATALOG_SOURCE` and `CHALLENGE_STORAGE_PROVIDER`. The Challenges page remembers search, filters, and sorting on this browser. Reset Filters clears the filters and keeps the sort order.
 
-The challenge catalog contains 40 JavaScript, Python, and Java debugging challenges.
+## Verification and publishing
+
+```sh
+npm run typecheck
+npm run build
+npm run verify:storage
+npm run verify:linux
+npm run verify:results
+npm run verify:interviews
+npm run verify:coach
+npm run verify:auth
+npm run verify:progress-reset
+npm run migrate:challenges -- --dry-run
+```
+
+Use a separate development database and local snapshot directory for feature work. Keep credentials in ignored environment files. The dry run validates the bundled challenges without connecting to MongoDB or R2. Use the [challenge storage guide](docs/challenge-storage.md) for publishing, preview deployment, and rollback.

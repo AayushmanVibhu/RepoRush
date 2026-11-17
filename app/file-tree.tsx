@@ -9,7 +9,7 @@ import {
   Folder,
   FolderOpen,
 } from "lucide-react";
-import type { Challenge } from "./challenges";
+import type { WorkspaceChallenge } from "@/lib/challenge-model";
 
 type Directory = {
   path: string;
@@ -24,7 +24,7 @@ export function FileTree({
   setSelected,
   dirty,
 }: {
-  challenge: Challenge;
+  challenge: Pick<WorkspaceChallenge, "id" | "repoName">;
   files: Record<string, string>;
   selected: string;
   setSelected: (path: string) => void;

@@ -29,14 +29,17 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import type { Difficulty, TestRow } from "./challenges";
+import { languageForPath, type ChallengeCard, type WorkspaceChallenge } from "@/lib/challenge-model";
 import {
-  challenges,
-  challengeLabel,
-  languageForPath,
-  type Challenge,
-  type Difficulty,
-  type TestRow,
-} from "./challenges";
+  challengeJson,
+  deleteWorkspaceDrafts,
+  fetchChallengeCatalog,
+  openPublishedChallenge,
+  sameFiles,
+  storeWorkspaceDraft,
+  type OpenChallenge,
+} from "@/lib/challenge-client";
 import { LoginPanel } from "./login/login-panel";
 import { BrandLogo } from "./brand-logo";
 import { LinuxTerminal, linuxRequest } from "./linux-terminal";
@@ -44,7 +47,6 @@ import { AICoach } from "./ai-coach";
 import { ResizableResults } from "./resizable-results";
 import { FileTree } from "./file-tree";
 import { TestCaseResults } from "./test-case-results";
-import { executionPlan, validateFiles } from "@/lib/sandbox-policy";
 
 const Monaco = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 type Screen = "explorer" | "skills" | "progress" | "workspace" | "result";
@@ -178,7 +180,70 @@ function AppSidebar({
   );
 }
 
+const challengePreferencesKey = "rr-challenge-preferences";
+const challengeLanguages = ["All", "Java", "Python", "JavaScript"];
+const challengeDifficulties = ["All", "Easy", "Medium", "Hard"];
+const challengeSortOptions = [
+  { value: "recommended", label: "Recommended order" },
+  { value: "difficulty-asc", label: "Difficulty: Easy to Hard" },
+  { value: "difficulty-desc", label: "Difficulty: Hard to Easy" },
+  { value: "language", label: "Language: A to Z" },
+];
+const defaultChallengeFilters = {
+  query: "",
+  difficulty: "All",
+  language: "All",
+  skill: "All",
+};
+const defaultChallengePreferences = {
+  ...defaultChallengeFilters,
+  sort: "recommended",
+};
+
+function savedChoice(value: unknown, options: readonly string[], fallback: string) {
+  return typeof value === "string" && options.includes(value) ? value : fallback;
+}
+
+function readChallengePreferences(options: {
+  languages: readonly string[];
+  difficulties: readonly string[];
+  skills: readonly string[];
+}): typeof defaultChallengePreferences {
+  try {
+    const raw = localStorage.getItem(challengePreferencesKey);
+    if (raw === null) return defaultChallengePreferences;
+
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return defaultChallengePreferences;
+    }
+
+    const saved = parsed as Record<string, unknown>;
+    return {
+      query:
+        typeof saved.query === "string" ? saved.query : defaultChallengeFilters.query,
+      difficulty: savedChoice(
+        saved.difficulty,
+        options.difficulties,
+        defaultChallengeFilters.difficulty,
+      ),
+      language: savedChoice(
+        saved.language,
+        options.languages,
+        defaultChallengeFilters.language,
+      ),
+      skill: savedChoice(saved.skill, options.skills, defaultChallengeFilters.skill),
+      sort:
+        challengeSortOptions.find(({ value }) => value === saved.sort)?.value ??
+        defaultChallengePreferences.sort,
+    };
+  } catch {
+    return defaultChallengePreferences;
+  }
+}
+
 function Explorer({
+  challenges,
   open,
   navigate,
   name,
@@ -186,22 +251,51 @@ function Explorer({
   image,
   progress,
 }: {
-  open: (c: Challenge) => void;
+  challenges: ChallengeCard[];
+  open: (c: ChallengeCard) => void;
   navigate: (screen: CatalogScreen) => void;
   name: string;
   email?: string | null;
   image?: string | null;
   progress: Record<string, ProgressRecord>;
 }) {
-  const [query, setQuery] = useState("");
-  const [difficulty, setDifficulty] = useState("All");
-  const [language, setLanguage] = useState("All");
-  const [skill, setSkill] = useState("All");
-  const [sort, setSort] = useState("recommended");
-  const skillOptions = useMemo(
-    () => [...new Set(challenges.flatMap((c) => c.skills))].sort(),
-    [],
-  );
+  const filterOptions = useMemo(() => ({
+    languages: challengeLanguages.filter((option) =>
+      option === "All" || challenges.some((card) => card.language === option),
+    ),
+    difficulties: challengeDifficulties.filter((option) =>
+      option === "All" || challenges.some((card) => card.difficulty === option),
+    ),
+    skills: [...new Set(challenges.flatMap((card) => card.skills))].sort(),
+  }), [challenges]);
+  const [preferences, setPreferences] = useState(defaultChallengePreferences);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const { query, difficulty, language, skill, sort } = preferences;
+  const hasActiveFilters =
+    query !== defaultChallengeFilters.query ||
+    difficulty !== defaultChallengeFilters.difficulty ||
+    language !== defaultChallengeFilters.language ||
+    skill !== defaultChallengeFilters.skill;
+
+  useEffect(() => {
+    setPreferences(readChallengePreferences(filterOptions));
+  }, [filterOptions]);
+
+  function updatePreferences(changes: Partial<typeof preferences>) {
+    const next = { ...preferences, ...changes };
+    setPreferences(next);
+    try {
+      localStorage.setItem(challengePreferencesKey, JSON.stringify(next));
+    } catch {
+      // Keep the catalog usable when browser storage is unavailable.
+    }
+  }
+
+  function resetFilters() {
+    updatePreferences(defaultChallengeFilters);
+    searchInput.current?.focus();
+  }
+
   const rows = useMemo(() => {
     const difficultyRank: Record<Difficulty, number> = {
       Easy: 0,
@@ -228,7 +322,7 @@ function Explorer({
         );
       return 0;
     });
-  }, [query, difficulty, language, skill, sort]);
+  }, [challenges, query, difficulty, language, skill, sort]);
   return (
     <div className="app-shell">
       <AppSidebar
@@ -261,8 +355,10 @@ function Explorer({
           <label className="search">
             <Search />
             <input
+              ref={searchInput}
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => updatePreferences({ query: e.target.value })}
+              aria-label="Search challenges"
               placeholder="Search challenges"
             />
             <kbd>⌘ K</kbd>
@@ -270,34 +366,38 @@ function Explorer({
           <label>
             <Code2 />
             <select
+              aria-label="Language"
               value={language}
-              onChange={(e) => setLanguage(e.target.value)}
+              onChange={(e) => updatePreferences({ language: e.target.value })}
             >
-              <option>All</option>
-              <option>Java</option>
-              <option>Python</option>
-              <option>JavaScript</option>
+              {filterOptions.languages.map((option) => (
+                <option key={option}>{option}</option>
+              ))}
             </select>
             <ChevronDown />
           </label>
           <label>
             <SlidersHorizontal />
             <select
+              aria-label="Difficulty"
               value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value)}
+              onChange={(e) => updatePreferences({ difficulty: e.target.value })}
             >
-              <option>All</option>
-              <option>Easy</option>
-              <option>Medium</option>
-              <option>Hard</option>
+              {filterOptions.difficulties.map((option) => (
+                <option key={option}>{option}</option>
+              ))}
             </select>
             <ChevronDown />
           </label>
           <label>
             <Target />
-            <select value={skill} onChange={(e) => setSkill(e.target.value)}>
+            <select
+              aria-label="Skill"
+              value={skill}
+              onChange={(e) => updatePreferences({ skill: e.target.value })}
+            >
               <option value="All">All skills</option>
-              {skillOptions.map((option) => (
+              {filterOptions.skills.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -307,14 +407,29 @@ function Explorer({
           </label>
           <label>
             <ArrowUpDown />
-            <select value={sort} onChange={(e) => setSort(e.target.value)}>
-              <option value="recommended">Recommended order</option>
-              <option value="difficulty-asc">Difficulty: Easy to Hard</option>
-              <option value="difficulty-desc">Difficulty: Hard to Easy</option>
-              <option value="language">Language: A to Z</option>
+            <select
+              aria-label="Sort challenges"
+              value={sort}
+              onChange={(e) => updatePreferences({ sort: e.target.value })}
+            >
+              {challengeSortOptions.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
             <ChevronDown />
           </label>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="filter-button"
+              onClick={resetFilters}
+            >
+              <RotateCcw aria-hidden="true" />
+              Reset Filters
+            </button>
+          )}
         </section>
         <section className="table-wrap">
           <div className="table-title">
@@ -350,7 +465,7 @@ function Explorer({
                     <span className="challenge-name">
                       <b>{c.title}</b>
                       <small>
-                        {challengeLabel(c.id)} · {c.summary}
+                        Challenge {c.number} · {c.summary}
                       </small>
                     </span>
                     <span className="language">
@@ -382,13 +497,7 @@ function Explorer({
               <Search />
               <h3>No matching challenges</h3>
               <p>Try clearing a filter or using a broader search.</p>
-              <button
-                onClick={() => {
-                  setQuery("");
-                  setDifficulty("All");
-                  setLanguage("All");
-                }}
-              >
+              <button type="button" onClick={resetFilters}>
                 Clear filters
               </button>
             </div>
@@ -397,22 +506,6 @@ function Explorer({
       </main>
     </div>
   );
-}
-
-function loadFiles(c: Challenge, userId: string): FileBuffers {
-  if (typeof window === "undefined") return { ...c.files };
-  try {
-    const saved = JSON.parse(localStorage.getItem(`rr-files-${userId}-${c.id}`) || "{}");
-    return Object.keys(saved).length ? withPublicTests(c, validateFiles(saved)) : {...c.files};
-  } catch {
-    return { ...c.files };
-  }
-}
-
-function withPublicTests(challenge: Challenge, files: FileBuffers): FileBuffers {
-  // Add newly introduced test files to existing workspaces without restoring deleted source.
-  const added = Object.fromEntries(Object.entries(challenge.files).filter(([path]) => path.startsWith("reporush/") && !(path in files)));
-  return {...added, ...files};
 }
 
 function ResultsPanel({
@@ -501,7 +594,7 @@ function IssuePanel({
   challenge,
   width,
 }: {
-  challenge: Challenge;
+  challenge: WorkspaceChallenge;
   width: number;
 }) {
   const [revealed, setRevealed] = useState(0);
@@ -533,7 +626,7 @@ function IssuePanel({
       </div>
       <div className="issue-body">
         <div className="issue-meta">
-          <span>{challengeLabel(challenge.id)}</span>
+          <span>Challenge {challenge.number}</span>
           <DifficultyBadge value={challenge.difficulty} />
         </div>
         <h1>{challenge.title}</h1>
@@ -593,17 +686,18 @@ function IssuePanel({
 }
 
 function Workspace({
-  challenge,
+  opened,
   userId,
   back,
   finish,
 }: {
-  challenge: Challenge;
+  opened: OpenChallenge;
   userId: string;
   back: () => void;
   finish: (r: TestRow[], m: number) => void;
 }) {
-  const [files, setFiles] = useState<FileBuffers>(() => loadFiles(challenge,userId));
+  const { challenge } = opened;
+  const [files, setFiles] = useState<FileBuffers>(opened.initialFiles);
   const [selected, setSelected] = useState(challenge.entryFile);
   const [results, setResults] = useState<TestRow[]>([]);
   const [running, setRunning] = useState(false);
@@ -612,12 +706,18 @@ function Workspace({
   const [selection, setSelection] = useState("");
   const [output, setOutput] = useState("");
   const [saveState, setSaveState] = useState<
-    "loading" | "saving" | "saved" | "local"
-  >("loading");
+    "saving" | "saved" | "local"
+  >(opened.updatedAt ? "saved" : "local");
+  const [conflicting, setConflicting] = useState(opened.conflicting);
+  const [saveError, setSaveError] = useState("");
+  const cloudFiles = useRef(opened.cloudFiles);
+  const cloudUpdatedAt = useRef(opened.updatedAt);
+  const latestFiles = useRef(files);
+  const mounted = useRef(false);
+  const saveQueue = useRef(Promise.resolve());
   const [left, setLeft] = useState(230);
   const [right, setRight] = useState(318);
   const drag = useRef<{ side: string; x: number; w: number } | null>(null);
-  const remoteLoaded = useRef(false);
   const dirty = useMemo(
     () =>
       new Set(
@@ -627,31 +727,33 @@ function Workspace({
       ),
     [challenge, files],
   );
-  const storageKey = `rr-files-${userId}-${challenge.id}`;
   const execute = async (submit = false) => {
-    if (running) return;
+    if (running || (submit && (conflicting || saveError))) return;
     setRunning(true);
     setBottomOpen(true);
     setTab("tests");
-    const start = performance.now();
     setOutput("");
     try {
       let data: {results: TestRow[]; durationMs: number; output: string};
       if (submit) {
+        await saveQueue.current;
         const response = await fetch("/api/submissions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             challengeId: challenge.id,
+            revision: challenge.revision,
+            baseUpdatedAt: cloudUpdatedAt.current,
             files,
           }),
         });
-        data = await response.json();
-        if (!response.ok) throw new Error((data as unknown as {error: string}).error || "Submission failed.");
-      } else if (executionPlan(challenge.id)) {
-        data = await linuxRequest("run", challenge.id, {files});
+        const saved = await challengeJson<typeof data & { updatedAt: string }>(response);
+        cloudUpdatedAt.current = saved.updatedAt;
+        cloudFiles.current = files;
+        storeWorkspaceDraft(opened, userId, latestFiles.current, saved.updatedAt, !sameFiles(latestFiles.current, files));
+        data = saved;
       } else {
-        data = {results: challenge.evaluate(files).map(row => ({...row, kind: "static"})), durationMs: Math.round(performance.now() - start), output: "Static source checks only. This challenge does not yet have a configured sandbox regression suite. You can still run its tools in the Linux terminal."};
+        data = await linuxRequest("run", challenge.id, { files, revision: challenge.revision });
       }
       setResults(data.results);
       setOutput(data.output);
@@ -663,21 +765,7 @@ function Workspace({
     } finally {setRunning(false);}
   };
   useEffect(() => {
-    let active = true;
-    remoteLoaded.current = false;
-    fetch(`/api/progress/${encodeURIComponent(challenge.id)}`)
-      .then((response) => (response.ok ? response.json() : Promise.reject()))
-      .then((data) => {
-        if (!active) return;
-        setSaveState(data.progress?.files ? "saved" : "local");
-        if (!data.progress?.files) return;
-        const saved = data.progress.files as FileBuffers;
-        setFiles(withPublicTests(challenge, validateFiles(saved)));
-      })
-      .catch(() => setSaveState("local"))
-      .finally(() => {
-        if (active) remoteLoaded.current = true;
-      });
+    mounted.current = true;
     fetch("/api/memory", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -687,28 +775,45 @@ function Workspace({
         summary: `Started a ${challenge.difficulty.toLowerCase()} ${challenge.language} challenge about ${challenge.skills.join(", ")}.`,
       }),
     }).catch(() => undefined);
-    return () => {
-      active = false;
-    };
+    return () => { mounted.current = false; };
   }, [challenge]);
   useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(files));
-    if (!remoteLoaded.current) return;
-    setSaveState("saving");
+    latestFiles.current = files;
+    if (conflicting) return;
+    const pending = !sameFiles(files, cloudFiles.current);
+    storeWorkspaceDraft(opened, userId, files, cloudUpdatedAt.current, pending);
+    if (!pending || saveError || running) return;
+    let active = true;
     const timer = window.setTimeout(() => {
-      fetch(`/api/progress/${encodeURIComponent(challenge.id)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ files, status: "in-progress" }),
-      })
-        .then((response) => {
-          if (!response.ok) throw new Error("Save failed");
-          setSaveState("saved");
-        })
-        .catch(() => setSaveState("local"));
+      saveQueue.current = saveQueue.current.then(async () => {
+        if (!active || sameFiles(files, cloudFiles.current)) return;
+        setSaveState("saving");
+        try {
+          const response = await fetch(`/api/progress/${encodeURIComponent(challenge.id)}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ files, revision: challenge.revision, baseUpdatedAt: cloudUpdatedAt.current }),
+          });
+          if (response.status === 409) {
+            setSaveError("Workspace changed elsewhere. Reopen it to review the saved and local copies.");
+          }
+          const { updatedAt } = await challengeJson<{ updatedAt: string }>(response);
+          cloudFiles.current = files;
+          cloudUpdatedAt.current = updatedAt;
+          if (mounted.current) {
+            storeWorkspaceDraft(opened, userId, latestFiles.current, updatedAt, !sameFiles(latestFiles.current, files));
+            setSaveState("saved");
+          }
+        } catch {
+          if (mounted.current) setSaveState("local");
+        }
+      });
     }, 900);
-    return () => window.clearTimeout(timer);
-  }, [challenge.id, files, storageKey]);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [challenge, conflicting, files, opened, running, saveError, userId]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.target instanceof Element && e.target.closest(".linux-panel, .coach-panel")) return;
@@ -718,12 +823,12 @@ function Workspace({
       }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        localStorage.setItem(storageKey, JSON.stringify(files));
+        if (!conflicting) storeWorkspaceDraft(opened, userId, files, cloudUpdatedAt.current, !sameFiles(files, cloudFiles.current));
       }
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
-  }, [files, storageKey, running]);
+  }, [files, userId, opened, running, conflicting, saveError]);
   useEffect(() => {
     const move = (e: MouseEvent) => {
       if (!drag.current) return;
@@ -753,13 +858,11 @@ function Workspace({
         <div className="breadcrumbs">
           <span>Challenges</span>
           <ChevronRight />
-          <b>{challengeLabel(challenge.id)}</b>
+          <b>Challenge {challenge.number}</b>
           <i />
           <strong>{challenge.title}</strong>
           <small className={`save-state ${saveState}`}>
-            {saveState === "loading"
-              ? "Loading workspace…"
-              : saveState === "saving"
+            {saveState === "saving"
                 ? "Saving…"
                 : saveState === "saved"
                   ? "Saved"
@@ -770,6 +873,7 @@ function Workspace({
         <div className="toolbar-actions">
           <button
             className="reset"
+            disabled={conflicting}
             onClick={() => {
               setFiles({ ...challenge.files });
               setResults([]);
@@ -781,12 +885,12 @@ function Workspace({
           </button>
           <button className="run" disabled={running} onClick={() => execute()}>
             <Play />
-            {running ? "Running…" : executionPlan(challenge.id) ? "Run tests" : "Static checks"}
+            {running ? "Running…" : challenge.gradingMode === "sandbox" ? "Run tests" : "Static checks"}
             <kbd>⌘↵</kbd>
           </button>
           <button
             className="submit"
-            disabled={running}
+            disabled={running || conflicting || Boolean(saveError)}
             onClick={() => execute(true)}
           >
             <Check />
@@ -794,6 +898,17 @@ function Workspace({
           </button>
         </div>
       </header>
+      {(conflicting || saveError) && (
+        <div className="workspace-recovery">
+          <p role="alert">{saveError || "Local edits differ from the saved workspace. Choose the copy to keep."}</p>
+          {conflicting && (
+            <>
+              <button type="button" className="filter-button" onClick={() => { setFiles(cloudFiles.current); setConflicting(false); }}>Use saved copy</button>
+              <button type="button" className="filter-button" onClick={() => setConflicting(false)}>Keep local edits</button>
+            </>
+          )}
+        </div>
+      )}
       <div className="work-main">
         <aside style={{ width: left }}>
           <FileTree
@@ -837,6 +952,7 @@ function Workspace({
                 automaticLayout: true,
                 renderLineHighlight: "all",
                 lineNumbersMinChars: 3,
+                readOnly: conflicting,
               }}
             />
           </div>
@@ -848,8 +964,8 @@ function Workspace({
               setTab={setTab}
               close={() => setBottomOpen(false)}
               output={output}
-              terminal={<LinuxTerminal challengeId={challenge.id} files={files} onFilesChange={setFiles} visible={tab === "terminal"} />}
-              coach={<AICoach challenge={challenge} files={files} selected={selected} selection={selection} output={output} onFilesChange={setFiles} />}
+              terminal={<LinuxTerminal challengeId={challenge.id} revision={challenge.revision} files={files} onFilesChange={(next) => { if (!conflicting) setFiles(next); }} visible={tab === "terminal"} />}
+              coach={<AICoach challenge={challenge} files={files} selected={selected} selection={selection} output={output} onFilesChange={(next) => { if (!conflicting) setFiles(next); }} />}
             />
           )}{" "}
           {!bottomOpen && (
@@ -875,6 +991,7 @@ function Workspace({
 }
 
 function SkillTracks({
+  challenges,
   navigate,
   open,
   name,
@@ -883,7 +1000,8 @@ function SkillTracks({
   progress,
 }: {
   navigate: (screen: CatalogScreen) => void;
-  open: (challenge: Challenge) => void;
+  challenges: ChallengeCard[];
+  open: (challenge: ChallengeCard) => void;
   name: string;
   email?: string | null;
   image?: string | null;
@@ -943,7 +1061,7 @@ function SkillTracks({
         <section className="track-grid">
           {tracks.map((track) => {
             const percent = Math.round(
-              (track.finished / track.items.length) * 100,
+              (track.finished / (track.items.length || 1)) * 100,
             );
             return (
               <article className="track-card" key={track.language}>
@@ -970,7 +1088,7 @@ function SkillTracks({
                     <span key={skill}>{skill}</span>
                   ))}
                 </div>
-                <button onClick={() => open(track.next)}>
+                <button disabled={!track.next} onClick={() => track.next && open(track.next)}>
                   {track.finished ? "Continue track" : "Start track"}
                   <ChevronRight />
                 </button>
@@ -984,6 +1102,7 @@ function SkillTracks({
 }
 
 function ProgressView({
+  challenges,
   navigate,
   open,
   name,
@@ -993,7 +1112,8 @@ function ProgressView({
   onDeleteProgress,
 }: {
   navigate: (screen: CatalogScreen) => void;
-  open: (challenge: Challenge) => void;
+  challenges: ChallengeCard[];
+  open: (challenge: ChallengeCard) => void;
   name: string;
   email?: string | null;
   image?: string | null;
@@ -1049,7 +1169,7 @@ function ProgressView({
           <button className="continue-button delete-progress-button" onClick={() => {setDeleteConfirmation(''); setDeleteNotice(''); deleteDialog.current?.showModal();}} disabled={deleting}>
             <XCircle />{deleting ? 'Deleting…' : 'Delete progress'}
           </button>
-          <button className="continue-button" onClick={() => open(next)} disabled={deleting}>
+          <button className="continue-button" onClick={() => next && open(next)} disabled={deleting || !next}>
             Continue practice
             <ChevronRight />
           </button>
@@ -1083,7 +1203,7 @@ function ProgressView({
           <article>
             <small>Completion</small>
             <strong>
-              {Math.round((completed / challenges.length) * 100)}%
+              {Math.round((completed / (challenges.length || 1)) * 100)}%
             </strong>
             <span>across all tracks</span>
           </article>
@@ -1103,7 +1223,7 @@ function ProgressView({
               const count = items.filter(
                 (item) => progress[item.id]?.status === "completed",
               ).length;
-              const percent = Math.round((count / items.length) * 100);
+              const percent = Math.round((count / (items.length || 1)) * 100);
               return (
                 <div className="language-progress" key={language}>
                   <span>
@@ -1170,7 +1290,7 @@ function Result({
   retry,
   home,
 }: {
-  challenge: Challenge;
+  challenge: WorkspaceChallenge;
   rows: TestRow[];
   ms: number;
   retry: () => void;
@@ -1186,7 +1306,7 @@ function Result({
         <div className="brand">
           <Mark />
         </div>
-        <span>Submission · {challengeLabel(challenge.id)}</span>
+        <span>Submission · Challenge {challenge.number}</span>
       </header>
       <main>
         <div className={`result-icon ${accepted ? "accepted" : "rejected"}`}>
@@ -1253,21 +1373,66 @@ function Result({
     </div>
   );
 }
-export default function Page() {
-  const { data: session, status } = useSession();
+function CatalogStatus({
+  message,
+  error,
+  retry,
+  cancel,
+}: {
+  message: string;
+  error?: string;
+  retry?: () => void;
+  cancel?: () => void;
+}) {
+  return (
+    <main className="session-loading">
+      {error ? <p role="alert">{error}</p> : <p role="status">{message}</p>}
+      {retry && (
+        <button type="button" className="filter-button" onClick={retry}>
+          Retry
+        </button>
+      )}
+      {cancel && (
+        <button type="button" className="filter-button" onClick={cancel}>
+          Back
+        </button>
+      )}
+    </main>
+  );
+}
+
+function SignedInPage({
+  userId,
+  name,
+  email,
+  image,
+}: {
+  userId: string;
+  name: string;
+  email?: string | null;
+  image?: string | null;
+}) {
   const [screen, setScreen] = useState<Screen>("explorer");
+  const [challenges, setChallenges] = useState<ChallengeCard[] | null>(null);
+  const [catalogError, setCatalogError] = useState("");
+  const [catalogRetry, setCatalogRetry] = useState(0);
+  const [opening, setOpening] = useState<{
+    card: ChallengeCard;
+    error?: string;
+  } | null>(null);
+  const [opened, setOpened] = useState<OpenChallenge | null>(null);
+  const openingRequest = useRef<AbortController | null>(null);
   const [progress, setProgress] = useState<Record<string, ProgressRecord>>({});
   const progressVersion = useRef(0);
-  const [challenge, setChallenge] = useState(challenges[0]);
   const [submission, setSubmission] = useState<{ rows: TestRow[]; ms: number }>(
     { rows: [], ms: 0 },
   );
   const loadProgress = () => {
-    const version = progressVersion.current;
-    return fetch("/api/progress", {cache: 'no-store'})
+    const version = ++progressVersion.current;
+    return fetch("/api/progress", { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
-        if (data && version === progressVersion.current)
+        if (data && version === progressVersion.current) {
           setProgress(
             Object.fromEntries(
               data.progress.map((row: ProgressRecord) => [
@@ -1276,81 +1441,154 @@ export default function Page() {
               ]),
             ),
           );
+        }
       })
       .catch(() => undefined);
   };
   const deleteProgress = async () => {
     progressVersion.current++;
-    const response = await fetch('/api/progress', {method: 'DELETE', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({confirmation: 'DELETE MY PROGRESS'})});
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Could not delete your progress. Please retry.');
+    const response = await fetch("/api/progress", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmation: "DELETE MY PROGRESS" }),
+    });
+    await challengeJson(response);
     setProgress({});
-    try {for (const item of challenges) {localStorage.removeItem(`rr-files-${session!.user!.id}-${item.id}`);localStorage.removeItem(`rr-files-${item.id}`);}}
-    catch {throw new Error('Database progress was deleted, but browser drafts could not be cleared. Please retry.');}
+    try {
+      deleteWorkspaceDrafts(userId, challenges ?? []);
+    } catch {
+      throw new Error(
+        "Database progress was deleted, but browser drafts could not be cleared. Please retry.",
+      );
+    }
   };
   useEffect(() => {
-    if (session?.user?.id) loadProgress();
-  }, [session?.user?.id]);
-  if (status === "loading")
+    void loadProgress();
+    return () => {
+      openingRequest.current?.abort();
+      progressVersion.current++;
+    };
+  }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    setCatalogError("");
+    fetchChallengeCatalog(controller.signal)
+      .then((catalog) => {
+        if (!controller.signal.aborted) setChallenges(catalog.challenges);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted)
+          setCatalogError((error as Error).message);
+      });
+    return () => controller.abort();
+  }, [catalogRetry]);
+  const open = async (item: ChallengeCard) => {
+    openingRequest.current?.abort();
+    const controller = new AbortController();
+    openingRequest.current = controller;
+    setOpening({ card: item });
+    try {
+      const workspace = await openPublishedChallenge(
+        item.id,
+        userId,
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
+      setOpened(workspace);
+      setScreen("workspace");
+      setOpening(null);
+    } catch (error) {
+      if (!controller.signal.aborted)
+        setOpening({ card: item, error: (error as Error).message });
+    }
+  };
+  if (!challenges) {
+    return (
+      <CatalogStatus
+        message="Loading challenge library…"
+        error={catalogError}
+        retry={
+          catalogError
+            ? () => setCatalogRetry((attempt) => attempt + 1)
+            : undefined
+        }
+      />
+    );
+  }
+  if (opening) {
+    return (
+      <CatalogStatus
+        message={`Loading ${opening.card.title}…`}
+        error={opening.error}
+        retry={opening.error ? () => void open(opening.card) : undefined}
+        cancel={() => {
+          openingRequest.current?.abort();
+          setOpening(null);
+        }}
+      />
+    );
+  }
+  const catalog = {
+    challenges,
+    name,
+    email,
+    image,
+    progress,
+    open,
+    navigate: (destination: CatalogScreen) => setScreen(destination),
+  };
+  if (screen === "skills") return <SkillTracks {...catalog} />;
+  if (screen === "progress")
+    return <ProgressView {...catalog} onDeleteProgress={deleteProgress} />;
+  if (screen === "workspace" && opened) {
+    return (
+      <Workspace
+        key={opened.challenge.id}
+        opened={opened}
+        userId={userId}
+        back={() => {
+          setScreen("explorer");
+          void loadProgress();
+        }}
+        finish={(rows, ms) => {
+          setSubmission({ rows, ms });
+          setScreen("result");
+          void loadProgress();
+        }}
+      />
+    );
+  }
+  if (screen === "result" && opened) {
+    return (
+      <Result
+        challenge={opened.challenge}
+        {...submission}
+        retry={() => void open(opened.challenge)}
+        home={() => setScreen("explorer")}
+      />
+    );
+  }
+  return <Explorer {...catalog} />;
+}
+
+export default function Page() {
+  const { data: session, status } = useSession();
+  if (status === "loading") {
     return (
       <div className="session-loading">
         <span className="spinner" />
         Loading RepoRush…
       </div>
     );
-  if (!session?.user) return <LoginPanel />;
-  const name = session.user.name || session.user.email || "Developer";
-  const navigate = (destination: CatalogScreen) => setScreen(destination);
-  const open = (item: Challenge) => {
-    setChallenge(item);
-    setScreen("workspace");
-  };
-  return screen === "explorer" ? (
-    <Explorer
-      name={name}
-      email={session.user.email}
-      image={session.user.image}
-      progress={progress}
-      navigate={navigate}
-      open={open}
-    />
-  ) : screen === "skills" ? (
-    <SkillTracks
-      name={name}
-      email={session.user.email}
-      image={session.user.image}
-      progress={progress}
-      navigate={navigate}
-      open={open}
-    />
-  ) : screen === "progress" ? (
-    <ProgressView
-      name={name}
-      email={session.user.email}
-      image={session.user.image}
-      progress={progress}
-      onDeleteProgress={deleteProgress}
-      navigate={navigate}
-      open={open}
-    />
-  ) : screen === "workspace" ? (
-    <Workspace
-      key={`${session.user.id}:${challenge.id}`}
-      challenge={challenge}
+  }
+  if (!session?.user?.id) return <LoginPanel />;
+  return (
+    <SignedInPage
+      key={session.user.id}
       userId={session.user.id}
-      back={() => setScreen("explorer")}
-      finish={(rows, ms) => {
-        setSubmission({ rows, ms });
-        setScreen("result");
-        window.setTimeout(loadProgress, 1000);
-      }}
-    />
-  ) : (
-    <Result
-      challenge={challenge}
-      {...submission}
-      retry={() => setScreen("workspace")}
-      home={() => setScreen("explorer")}
+      name={session.user.name || session.user.email || "Developer"}
+      email={session.user.email}
+      image={session.user.image}
     />
   );
 }

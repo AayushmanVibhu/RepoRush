@@ -10,3 +10,15 @@ out/
 *.tsbuildinfo
 .DS_Store
 .oss-work/
+.challenge-storage/
+
+# Local tooling, reports, and database dumps
+.worktrees/
+.idea/
+.vscode/
+coverage/
+playwright-report/
+test-results/
+*.log
+mongo-dumps/
+mongodb-backups/
